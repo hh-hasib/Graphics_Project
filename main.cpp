@@ -177,6 +177,13 @@ bool barrierOpen = false;
 // Wheel rotation for cars
 float wheelRotation = 0.0f;
 
+// Cursor capture toggle
+bool cursorCaptured = true;
+
+// Entrance glass door
+bool entranceDoorOpen = false;
+float entranceDoorOffset = 0.0f; // 0=closed, 1=open
+
 // Texture IDs
 unsigned int texCubeVAO = 0;
 unsigned int texFloor = 0, texFashion = 0, texTech = 0, texGems = 0, texFood = 0, texTreeLeaf = 0, texTreeBark = 0, texGrass = 0;
@@ -226,6 +233,7 @@ int main()
 
     cout << "  3D MODERN SHOPPING MALL SIMULATION" << endl;
     cout << "  W/A/S/D - Move | Mouse - Look | ESC - Exit" << endl;
+    cout << "  C - Toggle Cursor (Mouse Lock)" << endl;
     cout << "  F1-F4 - Fullscreen viewport toggle" << endl;
     cout << "  1 - Toggle Ambient Light" << endl;
     cout << "  2 - Toggle Point Lights" << endl;
@@ -236,6 +244,7 @@ int main()
     cout << "  E - Elevator Up/Down" << endl;
     cout << "  R - Escalator Direction (Up/Down/Pause)" << endl;
     cout << "  B - Boom Barrier Open/Close" << endl;
+    cout << "  G - Open/Close Entrance Door" << endl;
 
     Shader ls("vertexShaderForPhongShading.vs", "fragmentShaderForPhongShading.fs");
     Shader fs("vertexShader.vs", "fragmentShader.fs");
@@ -427,6 +436,11 @@ int main()
         float targetAngle = barrierOpen ? 90.0f : 0.0f;
         if (barrierAngle < targetAngle) barrierAngle = glm::min(barrierAngle + deltaTime * 90.0f, targetAngle);
         if (barrierAngle > targetAngle) barrierAngle = glm::max(barrierAngle - deltaTime * 90.0f, targetAngle);
+
+        // Entrance door animation
+        float doorTarget = entranceDoorOpen ? 1.0f : 0.0f;
+        if (entranceDoorOffset < doorTarget) entranceDoorOffset = glm::min(entranceDoorOffset + deltaTime * 1.2f, doorTarget);
+        if (entranceDoorOffset > doorTarget) entranceDoorOffset = glm::max(entranceDoorOffset - deltaTime * 1.2f, doorTarget);
 
         // Elevator state machine update
         elevatorTimer += deltaTime;
@@ -744,57 +758,78 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             cb = glm::rotate(cb, glm::radians(ry), {0, 1, 0});
         glm::vec3 dk = bc * 0.75f;                         // darker shade
         glm::vec3 lt = glm::min(bc * 1.15f, glm::vec3(1)); // lighter shade
-        // Main body (lower)
-        drawCube(V, ls, cb, bc, {0, .45f, 0}, {2.1f, .7f, 4.4f}, 64, .85f);
-        // Front bumper
-        drawCube(V, ls, cb, dk, {0, .3f, 2.3f}, {2.15f, .35f, .4f}, 64, .7f);
+        // --- Lower body (wider at bottom, slightly rounded look via layered cubes) ---
+        drawCube(V, ls, cb, bc, {0, .35f, 0}, {2.2f, .5f, 4.4f}, 64, .85f);        // base slab
+        drawCube(V, ls, cb, bc * 1.02f, {0, .55f, 0}, {2.1f, .2f, 4.3f}, 64, .85f); // upper body strip
+        // Front bumper (rounded profile: two layers)
+        drawCube(V, ls, cb, dk, {0, .28f, 2.25f}, {2.1f, .3f, .35f}, 64, .7f);
+        drawCube(V, ls, cb, dk * .95f, {0, .22f, 2.32f}, {1.8f, .18f, .2f}, 64, .7f); // lower lip
         // Rear bumper
-        drawCube(V, ls, cb, dk, {0, .3f, -2.3f}, {2.15f, .35f, .4f}, 64, .7f);
-        // Hood
-        drawCube(V, ls, cb, lt, {0, .85f, 1.2f}, {1.9f, .1f, 1.8f}, 64, .9f);
-        // Cabin
-        drawCube(V, ls, cb, bc * .95f, {0, 1.05f, -.3f}, {1.7f, .6f, 2.2f}, 64, .85f);
-        // Roof
-        drawCube(V, ls, cb, lt, {0, 1.38f, -.3f}, {1.6f, .06f, 1.8f}, 64, .9f);
-        // Windshield
-        drawCube(V, ls, cb, C_GLASS, {0, 1.05f, .85f}, {1.5f, .5f, .08f}, 128, .25f);
+        drawCube(V, ls, cb, dk, {0, .28f, -2.25f}, {2.1f, .3f, .35f}, 64, .7f);
+        drawCube(V, ls, cb, dk * .95f, {0, .22f, -2.32f}, {1.8f, .18f, .2f}, 64, .7f);
+        // Hood (sloped via angled cube layers)
+        drawCube(V, ls, cb, lt, {0, .72f, 1.5f}, {1.95f, .12f, 1.2f}, 64, .9f);       // flat top
+        drawCube(V, ls, cb, lt * .97f, {0, .66f, 1.85f}, {1.85f, .08f, .5f}, 64, .9f); // front slope
+        // Trunk (slightly lower than hood)
+        drawCube(V, ls, cb, lt, {0, .68f, -1.6f}, {1.9f, .1f, 1.0f}, 64, .9f);
+        // Cabin (narrower than body = trapezoidal feel)
+        drawCube(V, ls, cb, bc * .95f, {0, 1.0f, -.2f}, {1.6f, .55f, 2.0f}, 64, .85f);
+        // Roof (even narrower)
+        drawCube(V, ls, cb, lt, {0, 1.3f, -.2f}, {1.5f, .06f, 1.7f}, 64, .9f);
+        // A-pillar / windshield (angled look via thin tilted cubes)
+        drawCube(V, ls, cb, C_GLASS, {0, 1.0f, .85f}, {1.42f, .48f, .08f}, 128, .25f);
+        drawCube(V, ls, cb, dk * .6f, {-.72f, 1.0f, .75f}, {.04f, .48f, .28f}, 64, .7f); // A-pillar L
+        drawCube(V, ls, cb, dk * .6f, {.72f, 1.0f, .75f}, {.04f, .48f, .28f}, 64, .7f);  // A-pillar R
         // Rear window
-        drawCube(V, ls, cb, C_GLASS, {0, 1.05f, -1.42f}, {1.5f, .45f, .08f}, 128, .25f);
+        drawCube(V, ls, cb, C_GLASS, {0, 1.0f, -1.25f}, {1.4f, .42f, .08f}, 128, .25f);
         // Side windows left
-        drawCube(V, ls, cb, C_GLASS, {-.86f, 1.05f, -.3f}, {.06f, .45f, 1.8f}, 128, .25f);
+        drawCube(V, ls, cb, C_GLASS, {-.81f, 1.0f, -.2f}, {.06f, .42f, 1.6f}, 128, .25f);
         // Side windows right
-        drawCube(V, ls, cb, C_GLASS, {.86f, 1.05f, -.3f}, {.06f, .45f, 1.8f}, 128, .25f);
-        // Wheel arches / fenders
-        drawCube(V, ls, cb, dk * .8f, {-.95f, .35f, 1.3f}, {.25f, .5f, .7f}, 32, .7f);
-        drawCube(V, ls, cb, dk * .8f, {.95f, .35f, 1.3f}, {.25f, .5f, .7f}, 32, .7f);
-        drawCube(V, ls, cb, dk * .8f, {-.95f, .35f, -1.3f}, {.25f, .5f, .7f}, 32, .7f);
-        drawCube(V, ls, cb, dk * .8f, {.95f, .35f, -1.3f}, {.25f, .5f, .7f}, 32, .7f);
-        // Tires (round spheres!)
-        glm::vec3 wheelPos[] = {{-.95f, .22f, 1.3f}, {.95f, .22f, 1.3f}, {-.95f, .22f, -1.3f}, {.95f, .22f, -1.3f}};
+        drawCube(V, ls, cb, C_GLASS, {.81f, 1.0f, -.2f}, {.06f, .42f, 1.6f}, 128, .25f);
+        // C-pillar (rear side pillars for shape)
+        drawCube(V, ls, cb, dk * .7f, {-.72f, 1.0f, -1.15f}, {.04f, .48f, .25f}, 64, .7f);
+        drawCube(V, ls, cb, dk * .7f, {.72f, 1.0f, -1.15f}, {.04f, .48f, .25f}, 64, .7f);
+        // Wheel wells (curved arches via layered cubes)
+        drawCube(V, ls, cb, dk * .7f, {-.98f, .32f, 1.3f}, {.28f, .45f, .7f}, 32, .7f);
+        drawCube(V, ls, cb, dk * .7f, {.98f, .32f, 1.3f}, {.28f, .45f, .7f}, 32, .7f);
+        drawCube(V, ls, cb, dk * .7f, {-.98f, .32f, -1.3f}, {.28f, .45f, .7f}, 32, .7f);
+        drawCube(V, ls, cb, dk * .7f, {.98f, .32f, -1.3f}, {.28f, .45f, .7f}, 32, .7f);
+        // --- Wheels: flat disc-style (heavily squashed sphere = circle, NOT 3D ball) ---
+        glm::vec3 wheelPos[] = {{-.98f, .22f, 1.3f}, {.98f, .22f, 1.3f}, {-.98f, .22f, -1.3f}, {.98f, .22f, -1.3f}};
         for (int wi = 0; wi < 4; wi++)
         {
+            // Tire: very flat along axle (X) so it looks like a circle/disc, not a ball
             glm::mat4 wm = glm::translate(cb, wheelPos[wi]);
-            wm = glm::scale(wm, glm::vec3(.22f, .24f, .24f)); // squash slightly for tire shape
+            wm = glm::rotate(wm, glm::radians(wheelRotation), {1, 0, 0}); // rotate around axle
+            wm = glm::scale(wm, glm::vec3(.05f, .24f, .24f)); // VERY flat on X axis = disc
             sphWheel->drawSphere(ls, wm);
-            // Hubcap (smaller sphere on outside)
-            glm::mat4 hm = glm::translate(cb, {wheelPos[wi].x + (wheelPos[wi].x < 0 ? -.08f : .08f), wheelPos[wi].y, wheelPos[wi].z});
-            hm = glm::scale(hm, glm::vec3(.06f, .15f, .15f));
+            // Hub: even flatter, silver disc on outer face
+            glm::mat4 hm = glm::translate(cb, {wheelPos[wi].x + (wheelPos[wi].x < 0 ? -.04f : .04f), wheelPos[wi].y, wheelPos[wi].z});
+            hm = glm::rotate(hm, glm::radians(wheelRotation), {1, 0, 0});
+            hm = glm::scale(hm, glm::vec3(.02f, .14f, .14f)); // very flat hub
             sphHub->drawSphere(ls, hm);
         }
-        // Headlights
-        drawCube(V, ls, cb, {1, .95f, .7f}, {-.65f, .55f, 2.22f}, {.35f, .2f, .05f}, 128);
-        drawCube(V, ls, cb, {1, .95f, .7f}, {.65f, .55f, 2.22f}, {.35f, .2f, .05f}, 128);
+        // Headlights (slightly recessed look)
+        drawCube(V, ls, cb, {1, .95f, .7f}, {-.65f, .48f, 2.28f}, {.38f, .2f, .06f}, 128);
+        drawCube(V, ls, cb, {1, .95f, .7f}, {.65f, .48f, 2.28f}, {.38f, .2f, .06f}, 128);
         // Taillights
-        drawCube(V, ls, cb, {.9f, .1f, .05f}, {-.65f, .55f, -2.22f}, {.35f, .18f, .05f}, 128);
-        drawCube(V, ls, cb, {.9f, .1f, .05f}, {.65f, .55f, -2.22f}, {.35f, .18f, .05f}, 128);
+        drawCube(V, ls, cb, {.9f, .1f, .05f}, {-.65f, .48f, -2.28f}, {.38f, .18f, .06f}, 128);
+        drawCube(V, ls, cb, {.9f, .1f, .05f}, {.65f, .48f, -2.28f}, {.38f, .18f, .06f}, 128);
         // Grille
-        drawCube(V, ls, cb, dk * .6f, {0, .5f, 2.22f}, {.8f, .25f, .05f}, 32, .5f);
+        drawCube(V, ls, cb, dk * .5f, {0, .42f, 2.3f}, {.9f, .22f, .05f}, 32, .5f);
+        drawCube(V, ls, cb, dk * .4f, {0, .42f, 2.32f}, {.7f, .15f, .02f}, 32, .4f); // inner grille
         // Side mirrors
-        drawCube(V, ls, cb, bc, {-1.15f, .95f, .5f}, {.15f, .12f, .2f}, 64, .8f);
-        drawCube(V, ls, cb, bc, {1.15f, .95f, .5f}, {.15f, .12f, .2f}, 64, .8f);
-        // Door line (subtle)
-        drawCube(V, ls, cb, dk * .9f, {-1.06f, .5f, 0}, {.02f, .1f, 2}, 32, .6f);
-        drawCube(V, ls, cb, dk * .9f, {1.06f, .5f, 0}, {.02f, .1f, 2}, 32, .6f);
+        drawCube(V, ls, cb, bc, {-1.18f, .9f, .5f}, {.15f, .12f, .2f}, 64, .8f);
+        drawCube(V, ls, cb, bc, {1.18f, .9f, .5f}, {.15f, .12f, .2f}, 64, .8f);
+        // Door lines (subtle)
+        drawCube(V, ls, cb, dk * .85f, {-1.11f, .45f, 0}, {.02f, .15f, 1.8f}, 32, .6f);
+        drawCube(V, ls, cb, dk * .85f, {1.11f, .45f, 0}, {.02f, .15f, 1.8f}, 32, .6f);
+        // Door handles
+        drawCube(V, ls, cb, dk * .5f, {-1.12f, .5f, .3f}, {.03f, .04f, .2f}, 64, .5f);
+        drawCube(V, ls, cb, dk * .5f, {1.12f, .5f, .3f}, {.03f, .04f, .2f}, 64, .5f);
+        // Side skirts (lower body trim)
+        drawCube(V, ls, cb, dk * .65f, {-1.1f, .14f, 0}, {.04f, .1f, 3.8f}, 32, .6f);
+        drawCube(V, ls, cb, dk * .65f, {1.1f, .14f, 0}, {.04f, .1f, 3.8f}, 32, .6f);
     };
     drawCar({.82f, .15f, .12f}, {-12, 0, 31}, 90); // Red car
     drawCar({.18f, .35f, .82f}, {-12, 0, 37}, 90); // Blue car
@@ -832,6 +867,28 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
     // Glass panels beside entrance
     drawCube(V, ls, I, C_GLASS, {-3.5f, WH - .5f, 25.01f}, {1.5f, MH - 1, .08f}, 128, .3f);
     drawCube(V, ls, I, C_GLASS, {3.5f, WH - .5f, 25.01f}, {1.5f, MH - 1, .08f}, 128, .3f);
+    // GLASS ENTRANCE DOORS (sliding, press G to open/close)
+    {
+        float edX = 0.0f, edZ = 25.0f;
+        float edHalfW = 3.8f; // total opening width
+        float slideAmt = entranceDoorOffset * edHalfW * 0.5f; // how far each door slides
+        // Left door panel (slides left when open)
+        float ldX = edX - edHalfW * 0.25f - slideAmt;
+        drawCube(V, ls, I, C_GLASS * 1.05f, {ldX, WH * 0.9f, edZ + 0.02f}, {edHalfW * 0.48f, MH * 0.85f, .1f}, 128, .2f);
+        // Right door panel (slides right when open)
+        float rdX = edX + edHalfW * 0.25f + slideAmt;
+        drawCube(V, ls, I, C_GLASS * 1.05f, {rdX, WH * 0.9f, edZ + 0.02f}, {edHalfW * 0.48f, MH * 0.85f, .1f}, 128, .2f);
+        // Door frame (metal surround)
+        drawCube(V, ls, I, C_LAMP, {edX, MH - 0.1f, edZ + 0.02f}, {edHalfW + 0.4f, .2f, .15f}); // top bar
+        drawCube(V, ls, I, C_LAMP, {edX - edHalfW * 0.5f - 0.1f, WH * 0.9f, edZ + 0.02f}, {.15f, MH * 0.85f, .15f}); // left post
+        drawCube(V, ls, I, C_LAMP, {edX + edHalfW * 0.5f + 0.1f, WH * 0.9f, edZ + 0.02f}, {.15f, MH * 0.85f, .15f}); // right post
+        // Door handle marks (faint)
+        drawCube(V, ls, I, C_LAMP * 1.3f, {ldX + edHalfW * 0.15f, 1.2f, edZ + 0.08f}, {.04f, .35f, .04f}, 64);
+        drawCube(V, ls, I, C_LAMP * 1.3f, {rdX - edHalfW * 0.15f, 1.2f, edZ + 0.08f}, {.04f, .35f, .04f}, 64);
+        // Button panel beside entrance (outside)
+        drawCube(V, ls, I, C_LAMP, {edX + edHalfW * 0.5f + 0.8f, 1.2f, edZ + 0.3f}, {.2f, .3f, .1f});
+        drawCube(V, ls, I, {0.1f, 0.9f, 0.3f}, {edX + edHalfW * 0.5f + 0.8f, 1.2f, edZ + 0.36f}, {.1f, .1f, .03f}); // green button
+    }
     // Windows on east/west
     for (int i = 0; i < 4; i++)
     {
@@ -1102,9 +1159,9 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
     drawCube(V, ls, I, C_PARAPET, {-25, pY, 0}, {.3f, 1, 50});
     drawCube(V, ls, I, C_PARAPET, {25, pY, 0}, {.3f, 1, 50});
 
-    // GLASS ELEVATOR (in N-S corridor, X=0, Z=5 area)
+    // GLASS ELEVATOR (moved to side of corridor, near E-W junction)
     {
-        float eX = 0.0f, eZ = 5.0f;
+        float eX = -2.0f, eZ = 13.0f;
         // Shaft frame (glass walls)
         drawCube(V, ls, I, C_GLASS, {eX - 1.2f, WH, eZ}, {.08f, MH, 2}, 128, .2f); // left wall
         drawCube(V, ls, I, C_GLASS, {eX + 1.2f, WH, eZ}, {.08f, MH, 2}, 128, .2f); // right wall
@@ -1122,6 +1179,10 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCube(V, ls, I, C_GLASS, {eX - doorHalf * 0.5f - 0.05f, elevatorY + 0.7f, eZ + 1.0f}, {doorHalf, 1.2f, .06f}, 128, .25f);
             drawCube(V, ls, I, C_GLASS, {eX + doorHalf * 0.5f + 0.05f, elevatorY + 0.7f, eZ + 1.0f}, {doorHalf, 1.2f, .06f}, 128, .25f);
         }
+        // Call button panel (small box beside elevator)
+        drawCube(V, ls, I, C_LAMP, {eX + 1.5f, 1.2f, eZ + 0.8f}, {.15f, .25f, .1f}); // panel
+        drawCube(V, ls, I, {0.2f, 0.8f, 0.2f}, {eX + 1.5f, 1.28f, eZ + 0.82f}, {.08f, .08f, .03f}); // up button
+        drawCube(V, ls, I, {0.8f, 0.2f, 0.2f}, {eX + 1.5f, 1.12f, eZ + 0.82f}, {.08f, .08f, .03f}); // down button
     }
 
     // ESCALATOR (near staircase area, X=15 corridor, Z=-6 to -16 area)
@@ -1264,9 +1325,22 @@ void key_callback(GLFWwindow *w, int key, int sc, int action, int mods)
         barrierOpen = !barrierOpen;
         cout << "Boom Barrier: " << (barrierOpen ? "OPENING" : "CLOSING") << endl;
     }
+    if (key == GLFW_KEY_C)
+    {
+        cursorCaptured = !cursorCaptured;
+        glfwSetInputMode(w, GLFW_CURSOR, cursorCaptured ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+        if (cursorCaptured) firstMouse = true; // avoid jump when re-capturing
+        cout << "Cursor: " << (cursorCaptured ? "CAPTURED" : "FREE") << endl;
+    }
+    if (key == GLFW_KEY_G)
+    {
+        entranceDoorOpen = !entranceDoorOpen;
+        cout << "Entrance Door: " << (entranceDoorOpen ? "OPENING" : "CLOSING") << endl;
+    }
 }
 void mouse_callback(GLFWwindow *w, double xp, double yp)
 {
+    if (!cursorCaptured) return; // don't move camera when cursor is free
     float x = (float)xp, y = (float)yp;
     if (firstMouse)
     {
