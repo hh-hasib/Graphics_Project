@@ -111,24 +111,26 @@ const glm::vec3 C_PARAPET(0.72f, 0.70f, 0.66f);
 //  Lights
 const int NUM_POINT_LIGHTS = 14;
 glm::vec3 plPos[NUM_POINT_LIGHTS] = {
-    // N-S corridor (pathway)
-    {0, 4.5f, 22},
-    {0, 4.5f, 5},
-    {0, 4.5f, -10},
-    // E-W corridor
-    {-12, 4.5f, 13},
-    {12, 4.5f, 13},
-    // One light per shop
-    {-18, 4.5f, 20},
-    {-8, 4.5f, 20},
-    {9, 4.5f, 20},
-    {20, 4.5f, 20},
-    // Food court
+    // N-S corridor
+    {0, 4.5f, 18},
+    {0, 4.5f, 4},
+    // Tech Shop (SW)
+    {-14, 4.5f, 16},
+    // Clothing Shop (SE)
+    {14, 4.5f, 16},
+    // Escalator + Staircase area
+    {-20, 4.5f, 4},
+    {20, 4.5f, 4},
+    // Prayer Room
     {-14, 4.5f, -10},
-    // Prayer room
-    {9, 4.5f, -15},
-    // Washroom
-    {20, 4.5f, -11},
+    // Gems Shop
+    {14, 4.5f, -10},
+    // Wash Room + Lift
+    {-14, 4.5f, -3},
+    {9, 4.5f, -3},
+    // Food court
+    {-10, 4.5f, -19},
+    {10, 4.5f, -19},
     // Parking lot
     {-10, 6.2f, 42},
     {10, 6.2f, 42}};
@@ -901,255 +903,264 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
     ls.setBool("blendWithColor", true);
     drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, -.02f, 0}, {49.5f, .08f, 49.5f}, texFloor, 8.0f, 32, .9f);
     ls.setBool("blendWithColor", false);
-    // Ceiling (hole at staircase corner X:15-25, Z:-25 to -16)
-    drawCube(V, ls, I, C_CEILING, {-5, MH, 0}, {40, .15f, 49.5f});
-    drawCube(V, ls, I, C_CEILING, {20, MH, 4.5f}, {10, .15f, 40});
-    // Roof floor
+    drawCube(V, ls, I, C_CEILING, {0, MH, 0}, {49.5f, .15f, 49.5f});
     drawCube(V, ls, I, C_PARKING, {0, MH + .05f, 0}, {49.5f, .1f, 49.5f}, 16, .8f);
 
-    // CORRIDORS
-    // N-S corridor: X:-3 to 3, full Z
-    // E-W corridor: Z:10 to 16, full X
-    //  Left N-S wall (X=-3)
-    // Below E-W corridor (shops side, Z:16 to 25)
-    //   Shop 1 entrance gap Z:20 to 24, Shop 2 gap Z:17 to 21 => simplify: just corner pieces
-    drawCube(V, ls, I, C_CORR, {-3, WH, 25}, {WT, MH, WT}); // corner at Z=25
-    drawCube(V, ls, I, C_CORR, {-3, WH, 16}, {WT, MH, WT}); // corner at E-W junction
-    // Above E-W corridor (food court side, Z:-25 to 10)
-    //   Food court wide opening: gap Z:-18 to -2
-    drawCube(V, ls, I, C_CORR, {-3, WH, -21.5f}, {WT, MH, 7}); // Z:-25 to -18
-    drawCube(V, ls, I, C_CORR, {-3, WH, 4}, {WT, MH, 12});     // Z:-2 to 10
+    // ================================================================
+    // INTERIOR LAYOUT — Matching the exact floor plan
+    // South: Tech Shop (W) + Clothing Shop (E)
+    // Middle: Escalator (W wall) + Staircase (E, facing east)
+    // Upper: Prayer Room + WashRoom (W) | Gems Shop + Lift (E)
+    // North: Food Court
+    // Corridor: X:-4 to 4 throughout
+    // ================================================================
 
-    // --- Right N-S wall (X=3) ---
-    drawCube(V, ls, I, C_CORR, {3, WH, 25}, {WT, MH, WT});
-    drawCube(V, ls, I, C_CORR, {3, WH, 16}, {WT, MH, WT});
-    // Prayer room entrance: gap Z:-16 to -6
-    drawCube(V, ls, I, C_CORR, {3, WH, -21}, {WT, MH, 8}); // Z:-25 to -17
-    drawCube(V, ls, I, C_CORR, {3, WH, 2}, {WT, MH, 16});  // Z:-6 to 10
+    // ---- WALLS: Cross walls dividing zones ----
+    // Z=8: shops / circulation divide
+    drawCube(V, ls, I, C_CORR, {-14.5f, WH, 8}, {21, MH, WT});
+    drawCube(V, ls, I, C_CORR, {14.5f, WH, 8}, {21, MH, WT});
+    // Z=0: circulation / services divide
+    drawCube(V, ls, I, C_CORR, {-14.5f, WH, 0}, {21, MH, WT});
+    drawCube(V, ls, I, C_CORR, {14.5f, WH, 0}, {21, MH, WT});
+    // Z=-14: services / food court divide (with gaps)
+    drawCube(V, ls, I, C_CORR, {-14.5f, WH, -14}, {21, MH, WT});
+    drawCube(V, ls, I, C_CORR, {14.5f, WH, -14}, {21, MH, WT});
 
-    // E-W corridor walls
-    // South wall of E-W corridor (Z=16), west side
-    drawCube(V, ls, I, C_CORR, {-14, WH, 16}, {22, MH, WT});
-    // South wall of E-W corridor (Z=16), east side
-    drawCube(V, ls, I, C_CORR, {14, WH, 16}, {22, MH, WT});
-    // North wall of E-W corridor (Z=10), west side (food court opening Z=5 to 10 area is open)
-    drawCube(V, ls, I, C_CORR, {-14, WH, 10}, {22, MH, WT});
-    // North wall of E-W corridor (Z=10), east side
-    drawCube(V, ls, I, C_CORR, {14, WH, 10}, {22, MH, WT});
+    // ---- CORRIDOR WALLS (X=-4 and X=4) ----
+    // South section (Z=8 to 24): glass storefronts
+    // West (Tech Shop): glass panels with 4-unit door gap Z=13-17
+    drawCube(V, ls, I, C_GLASS, {-4.01f, WH*.7f, 20.5f}, {.08f, MH*.65f, 7}, 128, .3f);
+    drawCube(V, ls, I, C_GLASS, {-4.01f, WH*.7f, 10.5f}, {.08f, MH*.65f, 5}, 128, .3f);
+    // East (Clothing Shop): glass panels with 4-unit door gap Z=13-17
+    drawCube(V, ls, I, C_GLASS, {4.01f, WH*.7f, 20.5f}, {.08f, MH*.65f, 7}, 128, .3f);
+    drawCube(V, ls, I, C_GLASS, {4.01f, WH*.7f, 10.5f}, {.08f, MH*.65f, 5}, 128, .3f);
 
-    // ------ SHOP BANNERS (textured signs above entrances, on corridor-facing wall) ------
-    // Fashion shop banner (above E-W corridor south wall, facing corridor)
-    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {-19.5f, 4.2f, 15.7f}, {10, 1.5f, .1f}, texFashion, 1, 16);
-    // Tech shop banner
-    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {-8.5f, 4.2f, 15.7f}, {9, 1.5f, .1f}, texTech, 1, 16);
-    // Gems shop banner
-    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {9.f, 4.2f, 15.7f}, {10, 1.5f, .1f}, texGems, 1, 16);
-    // Food court banner (on N-S corridor wall, facing corridor)
-    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {-2.85f, 4.2f, -10}, {.1f, 1.5f, 14}, texFood, 1, 16);
+    // Center section (Z=0 to 8): solid walls with gap Z=2-6
+    drawCube(V, ls, I, C_CORR, {-4, WH, 7}, {WT, MH, 2});
+    drawCube(V, ls, I, C_CORR, {-4, WH, 1}, {WT, MH, 2});
+    drawCube(V, ls, I, C_CORR, {4, WH, 7}, {WT, MH, 2});
+    drawCube(V, ls, I, C_CORR, {4, WH, 1}, {WT, MH, 2});
 
-    // SHOP 1 - FASHION (X:-25 to -3, Z:16 to 25)
+    // Services section (Z=-14 to 0): solid walls with gaps
+    drawCube(V, ls, I, C_CORR, {-4, WH, -3}, {WT, MH, 6});
+    drawCube(V, ls, I, C_CORR, {-4, WH, -12}, {WT, MH, 4});
+    drawCube(V, ls, I, C_CORR, {4, WH, -3}, {WT, MH, 6});
+    drawCube(V, ls, I, C_CORR, {4, WH, -12}, {WT, MH, 4});
+
+    // Food court (Z=-25 to -14): mostly open
+    drawCube(V, ls, I, C_CORR, {-4, WH, -15.5f}, {WT, MH, 3});
+    drawCube(V, ls, I, C_CORR, {4, WH, -15.5f}, {WT, MH, 3});
+
+    // ---- Internal divider walls ----
+    // West: Prayer/WashRoom divider at Z=-7
+    drawCube(V, ls, I, C_CORR, {-14.5f, WH, -7}, {21, MH, WT});
+    // East: Gems/Lift divider at Z=-7
+    drawCube(V, ls, I, C_CORR, {14.5f, WH, -7}, {21, MH, WT});
+
+    // ======== SHOP BANNERS (large, above glass storefronts) ========
+    // Tech Shop banner — west storefront, facing east
+    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {-4.08f, 4.0f, 15}, {.12f, 1.8f, 12}, texTech, 1, 16);
+    // Clothing Shop banner — east storefront, facing west
+    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {4.08f, 4.0f, 15}, {.12f, 1.8f, 12}, texFashion, 1, 16);
+    // Gems Shop banner — east side, Z=-7 to -14
+    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {4.08f, 4.0f, -10.5f}, {.12f, 1.8f, 7}, texGems, 1, 16);
+    // Food Court banner — above food court entrance
+    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {0, 4.0f, -14.15f}, {7, 1.8f, .12f}, texFood, 1, 16);
+
+    // ======== TECH SHOP (X:-24.5 to -4, Z:8 to 24) — Southwest ========
     {
-        float sx1 = -25, sx2 = -3, sz1 = 16, sz2 = 25;
-        float cx = (sx1 + sx2) / 2, cz = (sz1 + sz2) / 2;
-        // Walls - pink
-        drawCube(V, ls, I, C_FASH_WALL, {sx1 + WT / 2, WH, cz}, {WT, MH, sz2 - sz1}); // back (west)
-        // Floor tint
-        drawCube(V, ls, I, C_FASH_FLOOR, {cx, .03f, cz}, {sx2 - sx1, .04f, sz2 - sz1});
-        // Divider wall between shop 1 and shop 2 at X=-14
-        drawCube(V, ls, I, C_FASH_WALL, {-14, WH, cz}, {WT, MH, sz2 - sz1});
-
-        // Clothing racks (horizontal bars on stands)
-        // Rack 1: along back wall
-        drawCube(V, ls, I, C_RACK, {-23, 1.5f, 19}, {.1f, 2.8f, .1f});     // left post
-        drawCube(V, ls, I, C_RACK, {-23, 1.5f, 22}, {.1f, 2.8f, .1f});     // right post
-        drawCube(V, ls, I, C_RACK, {-23, 2.9f, 20.5f}, {.1f, .08f, 3.5f}); // bar
-        // Hanging clothes (colorful thin cubes)
-        glm::vec3 clothes[] = {{.9f, .2f, .3f}, {.2f, .5f, .9f}, {.9f, .8f, .1f}, {.3f, .8f, .3f}, {.8f, .4f, .9f}};
-        for (int i = 0; i < 5; i++)
-            drawCube(V, ls, I, clothes[i], {-23, 2.2f, 19.2f + i * .7f}, {.05f, 1.2f, .5f});
-
-        // Rack 2: center of shop
-        drawCube(V, ls, I, C_RACK, {-10, 1.3f, 19}, {.1f, 2.4f, .1f});
-        drawCube(V, ls, I, C_RACK, {-10, 1.3f, 23}, {.1f, 2.4f, .1f});
-        drawCube(V, ls, I, C_RACK, {-10, 2.5f, 21}, {.1f, .08f, 4});
-        for (int i = 0; i < 5; i++)
-            drawCube(V, ls, I, clothes[(i + 2) % 5], {-10, 1.8f, 19.5f + i * .8f}, {.05f, 1.1f, .5f});
-
-        // Mannequins (simple: base + body + head) ===
-        auto drawMannequin = [&](float mx, float mz, glm::vec3 shirtCol)
-        {
-            drawCube(V, ls, I, C_MANNEQUIN * .8f, {mx, .15f, mz}, {.8f, .3f, .8f}); // base
-            drawCube(V, ls, I, shirtCol, {mx, 1.2f, mz}, {.5f, 1.5f, .3f});         // body/shirt
-            drawCube(V, ls, I, C_MANNEQUIN, {mx, 2.15f, mz}, {.3f, .35f, .3f});     // head
+        drawCube(V, ls, I, C_TECH_FLOOR, {-14, .03f, 16}, {21, .04f, 16});
+        drawCube(V, ls, I, C_TECH_WALL, {-24.5f, WH, 16}, {WT, MH, 16});
+        // Display tables
+        auto drawDispTable = [&](float tx, float tz) {
+            drawCube(V, ls, I, C_DISP_BASE, {tx, .45f, tz}, {2.5f, .9f, 1.5f});
+            drawCube(V, ls, I, C_DISP_TABLE, {tx, .95f, tz}, {2.6f, .1f, 1.6f});
+            drawCube(V, ls, I, C_PHONE, {tx-.6f, 1.1f, tz}, {.15f,.02f,.3f});
+            drawCube(V, ls, I, C_PHONE, {tx, 1.1f, tz}, {.15f,.02f,.3f});
+            drawCube(V, ls, I, C_PHONE, {tx+.6f, 1.1f, tz}, {.15f,.02f,.3f});
         };
-        drawMannequin(-20, 21, {.9f, .3f, .4f});
-        drawMannequin(-18, 21, {.3f, .5f, .9f});
-        drawMannequin(-7, 21, {.2f, .7f, .3f});
-
-        // Mirrors (tall glass panels)
-        drawCube(V, ls, I, C_MIRROR, {-23, 2, 17}, {.05f, 3, 2}, 128, .3f);
-        drawCube(V, ls, I, C_MIRROR, {-17, 2, 24.5f}, {3, 3, .05f}, 128, .3f);
-
-        // Cash register desk
-        drawCube(V, ls, I, C_CASH_DESK, {-5, 0.5f, 23}, {2, 1, 1.5f});
-        drawCube(V, ls, I, C_CASH_DESK * 0.8f, {-5, 1.1f, 23}, {1, .3f, .8f}); // register
+        drawDispTable(-20, 12); drawDispTable(-20, 18);
+        drawDispTable(-12, 12); drawDispTable(-12, 18);
+        drawDispTable(-8, 15);
+        // Large screen on back wall
+        drawCube(V, ls, I, {.15f,.15f,.18f}, {-24.2f, 3, 16}, {.08f, 2, 10});
+        drawCube(V, ls, I, C_SCREEN, {-24.18f, 3, 16}, {.04f, 1.7f, 9.5f});
+        // Laptops
+        drawCube(V, ls, I, C_LAPTOP, {-12, 1.05f, 18.3f}, {.6f,.02f,.4f});
+        drawCube(V, ls, I, C_LAPTOP*.9f, {-12, 1.3f, 18.5f}, {.6f,.4f,.02f});
+        // Cash counter near entrance
+        drawCube(V, ls, I, C_COUNTER, {-7, .55f, 10}, {3, 1.1f, 2});
     }
 
-    // SHOP 2 - TECH (X:-14 to -3, Z:16 to 25)
+    // ======== CLOTHING SHOP (X:4 to 24.5, Z:8 to 24) — Southeast ========
     {
-        float sx1 = -14, sx2 = -3, sz1 = 16, sz2 = 25;
-        float cx = (sx1 + sx2) / 2, cz = (sz1 + sz2) / 2;
-        // Floor tint
-        drawCube(V, ls, I, C_TECH_FLOOR, {cx, .03f, cz}, {sx2 - sx1, .04f, sz2 - sz1});
-
-        // Display tables with devices (Apple Store style)
-        auto drawDispTable = [&](float tx, float tz)
-        {
-            drawCube(V, ls, I, C_DISP_BASE, {tx, .45f, tz}, {2, .9f, 1.2f});     // base
-            drawCube(V, ls, I, C_DISP_TABLE, {tx, .95f, tz}, {2.1f, .1f, 1.3f}); // top
-            // Devices on table
-            drawCube(V, ls, I, C_PHONE, {tx - .5f, 1.1f, tz}, {.15f, .02f, .3f}); // phone
-            drawCube(V, ls, I, C_PHONE, {tx, 1.1f, tz}, {.15f, .02f, .3f});
-            drawCube(V, ls, I, C_PHONE, {tx + .5f, 1.1f, tz}, {.15f, .02f, .3f});
+        drawCube(V, ls, I, C_FASH_FLOOR, {14, .03f, 16}, {21, .04f, 16});
+        drawCube(V, ls, I, C_FASH_WALL, {24.5f, WH, 16}, {WT, MH, 16});
+        // Clothing racks
+        drawCube(V, ls, I, C_RACK, {22, 1.5f, 12}, {.1f,2.8f,.1f});
+        drawCube(V, ls, I, C_RACK, {22, 1.5f, 20}, {.1f,2.8f,.1f});
+        drawCube(V, ls, I, C_RACK, {22, 2.9f, 16}, {.1f,.08f,8});
+        glm::vec3 clothes[] = {{.9f,.2f,.3f},{.2f,.5f,.9f},{.9f,.8f,.1f},{.3f,.8f,.3f},{.8f,.4f,.9f},{.7f,.3f,.6f},{.1f,.7f,.5f},{.9f,.6f,.2f}};
+        for (int i = 0; i < 8; i++)
+            drawCube(V, ls, I, clothes[i], {22, 2.2f, 12.5f + i * 1.f}, {.05f,1.2f,.7f});
+        // Second rack
+        drawCube(V, ls, I, C_RACK, {14, 1.3f, 12}, {.1f,2.4f,.1f});
+        drawCube(V, ls, I, C_RACK, {14, 1.3f, 20}, {.1f,2.4f,.1f});
+        drawCube(V, ls, I, C_RACK, {14, 2.5f, 16}, {.1f,.08f,8});
+        for (int i = 0; i < 8; i++)
+            drawCube(V, ls, I, clothes[(i+3)%8], {14, 1.8f, 12.5f + i * 1.f}, {.05f,1.1f,.7f});
+        // Mannequins
+        auto drawMannequin = [&](float mx, float mz, glm::vec3 sc) {
+            drawCube(V, ls, I, C_MANNEQUIN*.8f, {mx,.15f,mz}, {.8f,.3f,.8f});
+            drawCube(V, ls, I, sc, {mx,1.2f,mz}, {.5f,1.5f,.3f});
+            drawCube(V, ls, I, C_MANNEQUIN, {mx,2.15f,mz}, {.3f,.35f,.3f});
         };
-        drawDispTable(-10.5f, 19);
-        drawDispTable(-10.5f, 22);
-        drawDispTable(-5.5f, 19);
-        drawDispTable(-5.5f, 22);
-
-        // Large screen on wall
-        drawCube(V, ls, I, {.15f, .15f, .18f}, {sx1 + .2f, 3, 20.5f}, {.08f, 1.8f, 5}); // frame
-        drawCube(V, ls, I, C_SCREEN, {sx1 + .22f, 3, 20.5f}, {.04f, 1.6f, 4.6f});       // screen
-
-        // Laptops on right table
-        drawCube(V, ls, I, C_LAPTOP, {-5.5f, 1.05f, 22.3f}, {.6f, .02f, .4f});      // base
-        drawCube(V, ls, I, C_LAPTOP * .9f, {-5.5f, 1.3f, 22.5f}, {.6f, .4f, .02f}); // screen
+        drawMannequin(8, 10, {.9f,.3f,.4f});
+        drawMannequin(12, 10, {.3f,.5f,.9f});
+        drawMannequin(18, 10, {.2f,.7f,.3f});
+        // Mirror
+        drawCube(V, ls, I, C_MIRROR, {23, 2, 14}, {.05f,3,5}, 128, .3f);
+        // Cash desk
+        drawCube(V, ls, I, C_CASH_DESK, {7, .5f, 22}, {2.5f,1,1.5f});
+        drawCube(V, ls, I, C_CASH_DESK*.8f, {7, 1.1f, 22}, {1.2f,.3f,.8f});
     }
 
-    // SHOP 3 - GEMS/JEWELRY (X:3 to 25, Z:16 to 25) - GOLD WALLS
+    // ======== ESCALATOR (West wall, X:-22 to -18, Z:0 to 8, facing EAST into corridor) ========
     {
-        float sx1 = 3, sx2 = 25, sz1 = 16, sz2 = 25;
-        float cx = (sx1 + sx2) / 2, cz = (sz1 + sz2) / 2;
-        drawCube(V, ls, I, C_GEM_WALL, {sx2 - WT / 2, WH, cz}, {WT, MH, sz2 - sz1}); // back (east)
-        drawCube(V, ls, I, C_GEM_WALL, {cx, .03f, cz}, {sx2 - sx1, .04f, sz2 - sz1});
-        // Divider at X=15
-        drawCube(V, ls, I, C_GEM_WALL, {15, WH, cz}, {WT, MH, sz2 - sz1});
-
-        // Glass display cases
-        for (int i = 0; i < 3; i++)
-        {
-            float gx = 7 + i * 4.f;
-            drawCube(V, ls, I, C_GEM_CASE, {gx, .5f, 20}, {2, 1, 1.2f});
-            drawCube(V, ls, I, C_GLASS, {gx, 1.15f, 20}, {2.1f, .3f, 1.3f}, 128, .3f); // glass top
-            // Gems inside
-            drawCube(V, ls, I, {.9f, .2f, .2f}, {gx - .3f, .75f, 20}, {.2f, .15f, .2f}, 128); // ruby
-            drawCube(V, ls, I, {.2f, .3f, .9f}, {gx + .3f, .75f, 20}, {.2f, .15f, .2f}, 128); // sapphire
+        float esX = -20.f, esZ1 = 8.0f, esZ2 = 0.0f;
+        float esLen = esZ1 - esZ2;
+        float esH = 4.5f;
+        // Side rails (run N-S)
+        drawCube(V, ls, I, C_LAMP, {esX-0.7f, esH/2, (esZ1+esZ2)/2}, {.05f,esH+.5f,esLen});
+        drawCube(V, ls, I, C_LAMP, {esX+0.7f, esH/2, (esZ1+esZ2)/2}, {.05f,esH+.5f,esLen});
+        // Handrails
+        drawCube(V, ls, I, C_LAMP*1.2f, {esX-0.7f, esH+.3f, (esZ1+esZ2)/2}, {.08f,.06f,esLen});
+        drawCube(V, ls, I, C_LAMP*1.2f, {esX+0.7f, esH+.3f, (esZ1+esZ2)/2}, {.08f,.06f,esLen});
+        // Moving steps (go from Z=8 bottom to Z=0 top, rising northward)
+        int numSteps = 16;
+        float stepLen = esLen / numSteps;
+        for (int i = 0; i < numSteps; i++) {
+            float rawZ = esZ2 + (i + escalatorOffset/(esLen/numSteps)) * stepLen;
+            float frac = fmod(rawZ - esZ2, esLen);
+            if (frac < 0) frac += esLen;
+            float sZ = esZ2 + frac;
+            float t = 1.0f - (sZ - esZ2) / esLen; // rises as Z decreases (north)
+            float sY = t * esH;
+            drawCube(V, ls, I, C_STAIR*1.05f, {esX, sY+.05f, sZ}, {1.2f,.1f,stepLen*.85f});
         }
+        // Floor area around escalator
+        drawCube(V, ls, I, C_STAIR*.9f, {-20, .03f, 4}, {8, .04f, 8});
     }
 
-    // SHOP 4 - BOOKSTORE (X:15 to 25, Z:16 to 25) -
+    // ======== STAIRCASE (East side, X:16 to 24, Z:0 to 8, facing EAST → steps go along X) ========
     {
-        drawCube(V, ls, I, C_BOOK_WALL * 1.1f, {20, .03f, 20.5f}, {10, .04f, 9});
-        // Tall bookshelves along walls
-        for (int i = 0; i < 3; i++)
-        {
-            drawCube(V, ls, I, C_BOOKSHELF, {17 + i * 3.f, 1.8f, 18}, {.4f, 3.4f, 3});
-            // Book rows (colorful)
-            glm::vec3 bc[] = {{.8f, .2f, .1f}, {.1f, .3f, .7f}, {.2f, .6f, .2f}, {.7f, .6f, .1f}};
-            for (int j = 0; j < 4; j++)
-                drawCube(V, ls, I, bc[j], {17 + i * 3.f, .5f + j * .8f, 17.9f}, {.35f, .5f, .6f});
+        float stDepth = 8.f; // Z extent (Z:0 to 8)
+        int numSteps = 10;
+        float stepW = 8.f / numSteps; // step width along X
+        for (int i = 0; i < numSteps; i++) {
+            float sx = 16.f + i * stepW + stepW / 2;
+            float sy = i * .5f + .25f;
+            drawCube(V, ls, I, C_STAIR, {sx, sy, 4}, {stepW, .5f, stDepth});
         }
-        // Reading table
-        drawCube(V, ls, I, C_TABLE, {20, .5f, 23}, {3, .06f, 2});
-        drawCube(V, ls, I, C_TABLE * .8f, {20, .25f, 23}, {.1f, .48f, .1f});
+        // Railings (run along X on both Z sides)
+        drawCube(V, ls, I, C_LAMP, {20, 2.5f, 0.2f}, {8, MH, .08f});
+        drawCube(V, ls, I, C_LAMP, {20, 2.5f, 7.8f}, {8, MH, .08f});
+        // Floor
+        drawCube(V, ls, I, C_STAIR*.9f, {20, .03f, 4}, {8, .04f, 8});
     }
 
-    // FOOD COURT (X:-25 to -3, Z:-25 to 10) - COLORFUL STALLS
+    // ======== PRAYER ROOM (X:-24.5 to -4, Z:-14 to -7) — Northwest upper ========
     {
-        drawCube(V, ls, I, C_FOOD_FLOOR, {-14, .03f, -7.5f}, {22, .04f, 35});
-
-        // Food stalls along west wall
-        // Stall 1 - Burger (red)
-        drawCube(V, ls, I, C_STALL_RED, {-24, WH, -20}, {2, MH, 6});
-        drawCube(V, ls, I, C_COUNTER, {-22, .55f, -20}, {2, 1.1f, 5});
-        // Stall 2 - Pizza (yellow)
-        drawCube(V, ls, I, C_STALL_YEL, {-24, WH, -13}, {2, MH, 6});
-        drawCube(V, ls, I, C_COUNTER, {-22, .55f, -13}, {2, 1.1f, 5});
-        // Stall 3 - Chicken (green)
-        drawCube(V, ls, I, C_STALL_GRN, {-24, WH, -6}, {2, MH, 6});
-        drawCube(V, ls, I, C_COUNTER, {-22, .55f, -6}, {2, 1.1f, 5});
-
-        //  Food stalls along north wall
-        // Stall 4 - Tacos (orange)
-        drawCube(V, ls, I, C_STALL_ORG, {-18, WH, -24}, {10, MH, 2});
-        drawCube(V, ls, I, C_COUNTER, {-18, .55f, -22}, {9, 1.1f, 2});
-        // Stall 5 - Drinks (purple)
-        drawCube(V, ls, I, C_STALL_PUR, {-8, WH, -24}, {6, MH, 2});
-        drawCube(V, ls, I, C_COUNTER, {-8, .55f, -22}, {5, 1.1f, 2});
-
-        // Tables and chairs (grid) - NOW WITH BEZIER ROUNDED TABLE TOPS
-        for (int r = 0; r < 3; r++)
-            for (int c = 0; c < 3; c++)
-            {
-                float tx = -18 + c * 5.f, tz = -4 - r * 6.f;
-                // Bezier rounded table top (revolved surface)
-                glm::mat4 tm = glm::translate(I, {tx, 0.75f, tz});
-                tm = glm::scale(tm, glm::vec3(1.2f, 1.0f, 1.2f));
-                bezierTable->draw(ls, tm, C_TABLE, 64.0f);
-                // Table leg
-                drawCube(V, ls, I, C_TABLE * .7f, {tx, .37f, tz}, {.08f, .72f, .08f});
-                // 4 chairs (curved backs via slight rotation gives illusion of curves)
-                drawCube(V, ls, I, C_CHAIR, {tx - .8f, .45f, tz}, {.4f, .05f, .4f});
-                drawCube(V, ls, I, C_CHAIR, {tx - .8f, .7f, tz - .18f}, {.4f, .45f, .05f});
-                drawCube(V, ls, I, C_CHAIR, {tx + .8f, .45f, tz}, {.4f, .05f, .4f});
-                drawCube(V, ls, I, C_CHAIR, {tx + .8f, .7f, tz + .18f}, {.4f, .45f, .05f});
-                drawCube(V, ls, I, C_CHAIR, {tx, .45f, tz - .8f}, {.4f, .05f, .4f});
-                drawCube(V, ls, I, C_CHAIR, {tx, .7f, tz - .8f}, {.05f, .45f, .4f});
-                drawCube(V, ls, I, C_CHAIR, {tx, .45f, tz + .8f}, {.4f, .05f, .4f});
-                drawCube(V, ls, I, C_CHAIR, {tx, .7f, tz + .8f}, {.05f, .45f, .4f});
-            }
-    }
-
-    // PRAYER ROOM (X:3 to 15, Z:-25 to -6) - CALM BEIGE
-    {
-        drawCube(V, ls, I, C_PRAY_WALL, {15, WH, -15.5f}, {WT, MH, 19}); // east wall (divider)
-        drawCube(V, ls, I, C_PRAY_FLOOR, {9, .03f, -15.5f}, {12, .04f, 19});
+        drawCube(V, ls, I, C_PRAY_FLOOR, {-14, .03f, -10.5f}, {21, .04f, 7});
+        drawCube(V, ls, I, C_PRAY_WALL, {-24.5f, WH, -10.5f}, {WT, MH, 7});
         // Prayer mat
-        drawCube(V, ls, I, C_PRAY_MAT, {9, .06f, -16}, {4, .04f, 2.5f});
-        drawCube(V, ls, I, C_PRAY_MAT * .9f, {9, .07f, -16}, {3, .02f, 1.8f}); // inner pattern
-
-        // Standing lamp (from reference)
-        drawCube(V, ls, I, C_PRAY_LAMP * .6f, {12, .05f, -20}, {.5f, .1f, .5f});    // base
-        drawCube(V, ls, I, C_PRAY_LAMP * .5f, {12, 1.2f, -20}, {.08f, 2.3f, .08f}); // pole
-        drawCube(V, ls, I, C_PRAY_LAMP, {12, 2.6f, -20}, {.5f, .8f, .5f});          // lampshade
-
-        // Small bookshelf (from reference)
-        drawCube(V, ls, I, C_PRAY_SHELF, {13, .5f, -13}, {1.5f, 1, .8f});         // shelf body
-        drawCube(V, ls, I, C_PRAY_SHELF * .8f, {13, .7f, -13}, {1.2f, .3f, .6f}); // books
+        drawCube(V, ls, I, C_PRAY_MAT, {-16, .06f, -10}, {5, .04f, 3});
+        drawCube(V, ls, I, C_PRAY_MAT*.9f, {-16, .07f, -10}, {4, .02f, 2.2f});
+        // Standing lamp
+        drawCube(V, ls, I, C_PRAY_LAMP*.6f, {-22, .05f, -12}, {.5f,.1f,.5f});
+        drawCube(V, ls, I, C_PRAY_LAMP*.5f, {-22, 1.2f, -12}, {.08f,2.3f,.08f});
+        drawCube(V, ls, I, C_PRAY_LAMP, {-22, 2.6f, -12}, {.5f,.8f,.5f});
+        // Bookshelf
+        drawCube(V, ls, I, C_PRAY_SHELF, {-8, .5f, -12}, {1.5f,1,.8f});
+        drawCube(V, ls, I, C_PRAY_SHELF*.8f, {-8, .7f, -12}, {1.2f,.3f,.6f});
     }
 
-    // WASHROOM (X:15 to 25, Z:-16 to -6)
+    // ======== WASH ROOM (X:-24.5 to -4, Z:-7 to 0) — West middle ========
     {
-        drawCube(V, ls, I, C_WASH, {20, .03f, -11}, {10, .04f, 10});
-        drawCube(V, ls, I, C_CORR, {20, WH, -6}, {10, MH, WT});  // south wall
-        drawCube(V, ls, I, C_CORR, {15, WH, -11}, {WT, MH, 10}); // west wall (shared with prayer room)
+        drawCube(V, ls, I, C_WASH, {-14, .03f, -3.5f}, {21, .04f, 7});
         // Stall partitions
-        for (int i = 0; i < 3; i++)
-            drawCube(V, ls, I, C_WASH * .9f, {18 + i * 2.5f, 1.2f, -11}, {.08f, 2.2f, 6});
+        for (int i = 0; i < 4; i++)
+            drawCube(V, ls, I, C_WASH*.9f, {-22 + i * 4.f, 1.2f, -3.5f}, {.08f,2.2f,5});
     }
 
-    // STAIRCASE (X:15 to 25, Z:-25 to -16)
+    // ======== GEMS SHOP (X:4 to 24.5, Z:-14 to -7) — Northeast upper ========
     {
-        drawCube(V, ls, I, C_CORR, {20, WH, -16}, {10, MH, WT}); // divider above washroom
-        float stW = 9, stepD = 9.f / 10;
-        for (int i = 0; i < 10; i++)
-        {
-            float sy = i * .5f + .25f, sz = -16.5f - i * stepD - stepD / 2;
-            drawCube(V, ls, I, C_STAIR, {20, sy, sz}, {stW, .5f, stepD});
+        drawCube(V, ls, I, C_GEM_WALL, {14, .03f, -10.5f}, {21, .04f, 7});
+        drawCube(V, ls, I, C_GEM_WALL, {24.5f, WH, -10.5f}, {WT, MH, 7});
+        // Glass display cases
+        for (int i = 0; i < 3; i++) {
+            float gx = 9 + i * 6.f;
+            drawCube(V, ls, I, C_GEM_CASE, {gx, .5f, -10}, {3, 1, 2});
+            drawCube(V, ls, I, C_GLASS, {gx, 1.15f, -10}, {3.1f,.3f,2.1f}, 128, .3f);
+            drawCube(V, ls, I, {.9f,.2f,.2f}, {gx-.5f,.75f,-10}, {.25f,.18f,.25f}, 128);
+            drawCube(V, ls, I, {.2f,.3f,.9f}, {gx+.5f,.75f,-10}, {.25f,.18f,.25f}, 128);
+            drawCube(V, ls, I, {.2f,.8f,.3f}, {gx,.75f,-10.5f}, {.2f,.15f,.2f}, 128);
         }
-        // Railings
-        drawCube(V, ls, I, C_LAMP, {15.5f, 3, -20.5f}, {.1f, MH + 1, 9});
-        drawCube(V, ls, I, C_LAMP, {24.5f, 3, -20.5f}, {.1f, MH + 1, 9});
+        // Wall display
+        drawCube(V, ls, I, C_GEM_CASE*.9f, {23, 1.5f, -9}, {.6f,2.8f,4});
+        drawCube(V, ls, I, C_COUNTER, {7, .55f, -12}, {3, 1.1f, 2});
+    }
+
+    // ======== LIFT (X:4 to 14, Z:-7 to 0) — East middle ========
+    {
+        float eX = 9.f, eZ = -3.5f;
+        // Shaft (glass walls)
+        drawCube(V, ls, I, C_GLASS, {eX-1.5f, WH, eZ}, {.08f, MH, 3}, 128, .2f);
+        drawCube(V, ls, I, C_GLASS, {eX+1.5f, WH, eZ}, {.08f, MH, 3}, 128, .2f);
+        drawCube(V, ls, I, C_GLASS, {eX, WH, eZ-1.5f}, {3, MH, .08f}, 128, .2f);
+        // Shaft rails
+        drawCube(V, ls, I, C_LAMP, {eX-1.45f, WH, eZ-1.45f}, {.05f,MH,.05f});
+        drawCube(V, ls, I, C_LAMP, {eX+1.45f, WH, eZ-1.45f}, {.05f,MH,.05f});
+        drawCube(V, ls, I, C_LAMP, {eX-1.45f, WH, eZ+1.45f}, {.05f,MH,.05f});
+        drawCube(V, ls, I, C_LAMP, {eX+1.45f, WH, eZ+1.45f}, {.05f,MH,.05f});
+        // Moving platform
+        drawCube(V, ls, I, C_STAIR, {eX, elevatorY+.05f, eZ}, {2.8f,.1f,2.8f});
+        // Sliding doors (face WEST toward corridor, at X=eX-1.5)
+        float doorHalf = 1.4f * (1.f - elevatorDoorOffset);
+        if (doorHalf > 0.05f) {
+            drawCube(V, ls, I, C_GLASS, {eX-1.5f, elevatorY+.8f, eZ-doorHalf*.5f-.05f}, {.06f,1.4f,doorHalf}, 128, .25f);
+            drawCube(V, ls, I, C_GLASS, {eX-1.5f, elevatorY+.8f, eZ+doorHalf*.5f+.05f}, {.06f,1.4f,doorHalf}, 128, .25f);
+        }
+        // Button panel
+        drawCube(V, ls, I, C_LAMP, {eX-1.8f, 1.2f, eZ+1.2f}, {.15f,.25f,.1f});
+        drawCube(V, ls, I, {.2f,.8f,.2f}, {eX-1.82f, 1.28f, eZ+1.2f}, {.03f,.08f,.08f});
+        drawCube(V, ls, I, {.8f,.2f,.2f}, {eX-1.82f, 1.12f, eZ+1.2f}, {.03f,.08f,.08f});
+    }
+
+    // ======== FOOD COURT (Z:-25 to -14, full width) — North ========
+    {
+        drawCube(V, ls, I, C_FOOD_FLOOR, {0, .03f, -19.5f}, {49.5f, .04f, 11});
+        // Food stalls along north wall
+        drawCube(V, ls, I, C_STALL_RED, {-22, WH, -24.5f}, {5, MH, 1});
+        drawCube(V, ls, I, C_COUNTER, {-22, .55f, -23}, {4, 1.1f, 2});
+        drawCube(V, ls, I, C_STALL_YEL, {-12, WH, -24.5f}, {5, MH, 1});
+        drawCube(V, ls, I, C_COUNTER, {-12, .55f, -23}, {4, 1.1f, 2});
+        drawCube(V, ls, I, C_STALL_GRN, {5, WH, -24.5f}, {5, MH, 1});
+        drawCube(V, ls, I, C_COUNTER, {5, .55f, -23}, {4, 1.1f, 2});
+        drawCube(V, ls, I, C_STALL_ORG, {18, WH, -24.5f}, {5, MH, 1});
+        drawCube(V, ls, I, C_COUNTER, {18, .55f, -23}, {4, 1.1f, 2});
+        // Seating (tables + chairs)
+        for (int r = 0; r < 2; r++)
+            for (int c = 0; c < 4; c++) {
+                float tx = -14+c*9.f, tz = -16-r*4.f;
+                glm::mat4 ftm = glm::translate(I, {tx, 0.75f, tz});
+                bezierTable->draw(ls, ftm, C_TABLE, 64.0f);
+                drawCube(V, ls, I, C_TABLE*.7f, {tx,.37f,tz}, {.08f,.72f,.08f});
+                drawCube(V, ls, I, C_CHAIR, {tx-.8f,.45f,tz}, {.4f,.05f,.4f});
+                drawCube(V, ls, I, C_CHAIR, {tx-.8f,.7f,tz-.18f}, {.4f,.45f,.05f});
+                drawCube(V, ls, I, C_CHAIR, {tx+.8f,.45f,tz}, {.4f,.05f,.4f});
+                drawCube(V, ls, I, C_CHAIR, {tx+.8f,.7f,tz+.18f}, {.4f,.45f,.05f});
+            }
     }
 
     // ROOF PARAPET
@@ -1158,57 +1169,6 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
     drawCube(V, ls, I, C_PARAPET, {0, pY, 25}, {50, 1, .3f});
     drawCube(V, ls, I, C_PARAPET, {-25, pY, 0}, {.3f, 1, 50});
     drawCube(V, ls, I, C_PARAPET, {25, pY, 0}, {.3f, 1, 50});
-
-    // GLASS ELEVATOR (moved to side of corridor, near E-W junction)
-    {
-        float eX = -2.0f, eZ = 13.0f;
-        // Shaft frame (glass walls)
-        drawCube(V, ls, I, C_GLASS, {eX - 1.2f, WH, eZ}, {.08f, MH, 2}, 128, .2f); // left wall
-        drawCube(V, ls, I, C_GLASS, {eX + 1.2f, WH, eZ}, {.08f, MH, 2}, 128, .2f); // right wall
-        drawCube(V, ls, I, C_GLASS, {eX, WH, eZ - 1.0f}, {2.4f, MH, .08f}, 128, .2f); // back wall
-        // Shaft rails (metal)
-        drawCube(V, ls, I, C_LAMP, {eX - 1.15f, WH, eZ - .95f}, {.05f, MH, .05f});
-        drawCube(V, ls, I, C_LAMP, {eX + 1.15f, WH, eZ - .95f}, {.05f, MH, .05f});
-        drawCube(V, ls, I, C_LAMP, {eX - 1.15f, WH, eZ + .95f}, {.05f, MH, .05f});
-        drawCube(V, ls, I, C_LAMP, {eX + 1.15f, WH, eZ + .95f}, {.05f, MH, .05f});
-        // Moving platform
-        drawCube(V, ls, I, C_STAIR, {eX, elevatorY + .05f, eZ}, {2.2f, .1f, 1.8f});
-        // Sliding doors (split at front, Z=eZ+1)
-        float doorHalf = 1.1f * (1.0f - elevatorDoorOffset); // doors slide apart
-        if (doorHalf > 0.05f) {
-            drawCube(V, ls, I, C_GLASS, {eX - doorHalf * 0.5f - 0.05f, elevatorY + 0.7f, eZ + 1.0f}, {doorHalf, 1.2f, .06f}, 128, .25f);
-            drawCube(V, ls, I, C_GLASS, {eX + doorHalf * 0.5f + 0.05f, elevatorY + 0.7f, eZ + 1.0f}, {doorHalf, 1.2f, .06f}, 128, .25f);
-        }
-        // Call button panel (small box beside elevator)
-        drawCube(V, ls, I, C_LAMP, {eX + 1.5f, 1.2f, eZ + 0.8f}, {.15f, .25f, .1f}); // panel
-        drawCube(V, ls, I, {0.2f, 0.8f, 0.2f}, {eX + 1.5f, 1.28f, eZ + 0.82f}, {.08f, .08f, .03f}); // up button
-        drawCube(V, ls, I, {0.8f, 0.2f, 0.2f}, {eX + 1.5f, 1.12f, eZ + 0.82f}, {.08f, .08f, .03f}); // down button
-    }
-
-    // ESCALATOR (near staircase area, X=15 corridor, Z=-6 to -16 area)
-    {
-        float esX = 13.0f, esZ1 = -6.0f, esZ2 = -14.0f;
-        float esLen = esZ1 - esZ2; // 8 units long
-        float esH = 4.0f; // height rise
-        // Side rails
-        drawCube(V, ls, I, C_LAMP, {esX - 0.6f, esH / 2, (esZ1 + esZ2) / 2}, {.05f, esH + .5f, esLen});
-        drawCube(V, ls, I, C_LAMP, {esX + 0.6f, esH / 2, (esZ1 + esZ2) / 2}, {.05f, esH + .5f, esLen});
-        // Handrails (top)
-        drawCube(V, ls, I, C_LAMP * 1.2f, {esX - 0.6f, esH + .3f, (esZ1 + esZ2) / 2}, {.08f, .06f, esLen});
-        drawCube(V, ls, I, C_LAMP * 1.2f, {esX + 0.6f, esH + .3f, (esZ1 + esZ2) / 2}, {.08f, .06f, esLen});
-        // Moving steps
-        int numSteps = 16;
-        float stepLen = esLen / numSteps;
-        for (int i = 0; i < numSteps; i++) {
-            float rawZ = esZ2 + (i + escalatorOffset / (esLen / numSteps)) * stepLen;
-            float frac = fmod(rawZ - esZ2, esLen);
-            if (frac < 0) frac += esLen;
-            float sZ = esZ2 + frac;
-            float t = (sZ - esZ2) / esLen; // 0 (bottom) to 1 (top)
-            float sY = t * esH;
-            drawCube(V, ls, I, C_STAIR * 1.05f, {esX, sY + .05f, sZ}, {1.0f, .1f, stepLen * .85f});
-        }
-    }
 
     // LIGHT FIXTURE GEOMETRY (visual only, lights off)
     fs.use();
@@ -1238,11 +1198,11 @@ void processInput(GLFWwindow *w)
         basic_camera.move(LEFT, deltaTime);
     if (glfwGetKey(w, GLFW_KEY_D) == GLFW_PRESS)
         basic_camera.move(RIGHT, deltaTime);
-    // Staircase height (X:15-25, Z:-25 to -16)
+    // Staircase height (X:16-24, Z:0-8, steps face EAST)
     float x = basic_camera.eye.x, z = basic_camera.eye.z;
-    if (x >= 15 && x <= 25 && z >= -25 && z <= -16)
+    if (x >= 16 && x <= 24 && z >= 0 && z <= 8)
     {
-        float t = (-16.f - z) / 9.f;
+        float t = (x - 16.f) / 8.f; // X=16 bottom, X=24 top
         t = glm::clamp(t, 0.f, 1.f);
         basic_camera.eye.y = 1.7f + t * MH;
     }
