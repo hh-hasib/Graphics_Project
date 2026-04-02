@@ -60,6 +60,7 @@ uniform bool useTexture;
 uniform bool blendWithColor;
 uniform sampler2D texture1;
 uniform float texTiling;
+uniform bool useProceduralWall;
 
 // Day/Night interpolation factor (0.0 = full day, 1.0 = full night)
 uniform float dayNightMix;
@@ -67,6 +68,27 @@ uniform float dayNightMix;
 vec3 CalcPointLight(Material mat, PointLight light, vec3 N, vec3 Pos, vec3 V);
 vec3 CalcDirLight(Material mat, DirectionalLight light, vec3 N, vec3 Pos, vec3 V);
 vec3 CalcSpotLight(Material mat, SpotLight light, vec3 N, vec3 Pos, vec3 V);
+
+// Procedural stone/brick wall texture using mathematical functions
+vec3 proceduralWallColor(vec3 pos) {
+    float brickW = 2.0;
+    float brickH = 0.8;
+    float mortarT = 0.05;
+    float row = floor(pos.y / brickH);
+    float offset = mod(row, 2.0) * brickW * 0.5;
+    float brickX = pos.x + pos.z + offset;
+    float bx = mod(brickX, brickW);
+    float by = mod(pos.y, brickH);
+    float mx = smoothstep(0.0, mortarT, bx) * smoothstep(0.0, mortarT, brickW - bx);
+    float my = smoothstep(0.0, mortarT, by) * smoothstep(0.0, mortarT, brickH - by);
+    float brick = mx * my;
+    float n = fract(sin(dot(vec2(floor(brickX / brickW), row), vec2(12.9898, 78.233))) * 43758.5453);
+    vec3 brickCol = mix(vec3(0.72, 0.62, 0.50), vec3(0.82, 0.72, 0.58), n);
+    float n2 = fract(sin(dot(pos.xz * 3.7, vec2(23.14, 41.07))) * 3482.17);
+    brickCol += (n2 - 0.5) * 0.05;
+    vec3 mortarCol = vec3(0.88, 0.86, 0.82);
+    return mix(mortarCol, brickCol, brick);
+}
 
 void main()
 {
@@ -84,6 +106,11 @@ void main()
             mat.ambient = tc * 0.4;
             mat.diffuse = tc;
         }
+    }
+    if(useProceduralWall) {
+        vec3 wc = proceduralWallColor(FragPos);
+        mat.ambient = wc * 0.6;
+        mat.diffuse = wc;
     }
 
     // Day/Night ambient blending
