@@ -116,26 +116,24 @@ const glm::vec3 C_PARAPET(0.72f, 0.70f, 0.66f);
 //  Lights
 const int NUM_POINT_LIGHTS = 14;
 glm::vec3 plPos[NUM_POINT_LIGHTS] = {
-    // N-S corridor
-    {0, 4.5f, 18},
-    {0, 4.5f, 4},
-    // Tech Shop (SW)
-    {-14, 4.5f, 16},
-    // Clothing Shop (SE)
-    {14, 4.5f, 16},
-    // Escalator + Staircase area
-    {-20, 4.5f, 4},
-    {20, 4.5f, 4},
-    // Prayer Room
-    {-14, 4.5f, -10},
-    // Gems Shop
-    {14, 4.5f, -10},
-    // Wash Room + Lift
-    {-14, 4.5f, -3},
-    {9, 4.5f, -3},
-    // Food court
-    {-10, 4.5f, -19},
-    {10, 4.5f, -19},
+    // Central corridor (entrance to atrium)
+    {0, 4.5f, 30},
+    {0, 4.5f, 5},
+    // Tech Shop (NW)
+    {-24, 4.5f, -20},
+    {-24, 4.5f, -32},
+    // Clothing Shop (NE)
+    {24, 4.5f, -20},
+    {24, 4.5f, -32},
+    // Escalator area
+    {-5, 4.5f, 20},
+    {5, 4.5f, 20},
+    // Atrium
+    {0, 4.5f, -14},
+    // Staircases + Lift + Washroom
+    {-18, 4.5f, 16},
+    {18, 4.5f, 16},
+    {-32, 4.5f, 14},
     // Parking lot
     {-10, 6.2f, 42},
     {10, 6.2f, 42}};
@@ -168,14 +166,16 @@ SpotLight* spotLights_arr[NUM_SPOT_LIGHTS] = {};
 
 // Elevator state machine (3-floor)
 enum ElevatorState { ELEV_IDLE, ELEV_DOOR_OPENING, ELEV_DOOR_OPEN, ELEV_DOOR_CLOSING, ELEV_MOVING };
-ElevatorState elevatorState = ELEV_DOOR_OPEN;
+ElevatorState elevatorState = ELEV_IDLE;
 float elevatorY = 0.0f;
-float elevatorDoorOffset = 1.0f;
+float elevatorDoorOffset = 0.0f; // 0=closed, 1=open
 float elevatorTimer = 0.0f;
 int elevatorTargetFloor = 0;
 int elevatorCurrentFloor = 0;
-const float ELEV_SPEED = 4.0f;
-bool lKeyHeld = false;
+const float ELEV_SPEED = 3.0f;
+bool playerInsideLift = false;
+// Lift bounds: X:-37..-31, Z:22..28, center (-34,25)
+const float LIFT_X = -34.0f, LIFT_Z = 25.0f;
 
 // Escalator
 float escalatorOffset = 0.0f;
@@ -253,8 +253,8 @@ int main()
     cout << "  5 - Toggle Spot Lights (Store displays)" << endl;
     cout << "  T - Toggle Textures" << endl;
     cout << "  N - Toggle Day/Night Cycle" << endl;
-    cout << "  E - Call Elevator (when near lift door)" << endl;
-    cout << "  L+G/1/2 - Elevator to floor (when inside)" << endl;
+    cout << "  E - Call Elevator / Open door (when near lift)" << endl;
+    cout << "  Shift+0 / Shift+1 / Shift+2 - Lift to G/1st/2nd floor" << endl;
     cout << "  R - Escalator Direction (Up/Down/Pause)" << endl;
     cout << "  B - Boom Barrier Open/Close" << endl;
     cout << "  G - Open/Close Entrance Door" << endl;
@@ -338,23 +338,22 @@ int main()
     }
 
     // Create Spot Lights (store display highlights)
-    // Tech store - 2 spots aimed at display tables
+    // Tech store (NW) - 2 spots
     spotLights_arr[0] = new SpotLight(
-        glm::vec3(-10.5f, 4.5f, 19), glm::vec3(0, -1, 0),
+        glm::vec3(-20.0f, 4.5f, -20), glm::vec3(0, -1, 0),
         glm::vec3(0.05f), glm::vec3(0.9f, 0.85f, 0.8f), glm::vec3(0.8f),
         15.0f, 25.0f, 1.0f, 0.09f, 0.032f, 0);
     spotLights_arr[1] = new SpotLight(
-        glm::vec3(-5.5f, 4.5f, 22), glm::vec3(0, -1, 0),
+        glm::vec3(-28.0f, 4.5f, -28), glm::vec3(0, -1, 0),
         glm::vec3(0.05f), glm::vec3(0.9f, 0.85f, 0.8f), glm::vec3(0.8f),
         15.0f, 25.0f, 1.0f, 0.09f, 0.032f, 1);
-    // Gems store - spot on display cases
+    // Clothing store (NE) - 2 spots
     spotLights_arr[2] = new SpotLight(
-        glm::vec3(9, 4.5f, 20), glm::vec3(0, -1, 0),
+        glm::vec3(20.0f, 4.5f, -20), glm::vec3(0, -1, 0),
         glm::vec3(0.05f), glm::vec3(1.0f, 0.95f, 0.7f), glm::vec3(0.9f),
         12.0f, 22.0f, 1.0f, 0.09f, 0.032f, 2);
-    // Bookstore reading area
     spotLights_arr[3] = new SpotLight(
-        glm::vec3(20, 4.5f, 23), glm::vec3(0, -1, 0.1f),
+        glm::vec3(28.0f, 4.5f, -28), glm::vec3(0, -1, 0.1f),
         glm::vec3(0.04f), glm::vec3(0.85f, 0.8f, 0.65f), glm::vec3(0.5f),
         18.0f, 28.0f, 1.0f, 0.09f, 0.032f, 3);
 
@@ -456,28 +455,38 @@ int main()
         if (entranceDoorOffset < doorTarget) entranceDoorOffset = glm::min(entranceDoorOffset + deltaTime * 1.2f, doorTarget);
         if (entranceDoorOffset > doorTarget) entranceDoorOffset = glm::max(entranceDoorOffset - deltaTime * 1.2f, doorTarget);
         // Elevator state machine update (3-floor)
+        // Check if player is inside lift (X:-37..-31, Z:22..28)
+        {
+            float px = basic_camera.eye.x, pz = basic_camera.eye.z;
+            float py = basic_camera.eye.y;
+            float liftFloorY = elevatorY;
+            playerInsideLift = (px >= -37 && px <= -31 && pz >= 22 && pz <= 28 &&
+                               py >= liftFloorY + 0.5f && py <= liftFloorY + 4.0f);
+        }
         elevatorTimer += deltaTime;
         switch (elevatorState) {
         case ELEV_IDLE:
             break;
         case ELEV_DOOR_OPENING:
-            elevatorDoorOffset = glm::min(elevatorDoorOffset + deltaTime * 1.0f, 1.0f);
+            elevatorDoorOffset = glm::min(elevatorDoorOffset + deltaTime * 1.2f, 1.0f);
             if (elevatorDoorOffset >= 1.0f) {
                 elevatorState = ELEV_DOOR_OPEN;
                 elevatorTimer = 0.0f;
             }
             break;
         case ELEV_DOOR_OPEN:
-            elevatorTimer += 0; // waiting for button or auto-close after 5s
-            if (elevatorTimer > 5.0f) {
-                elevatorState = ELEV_IDLE;
-                elevatorDoorOffset = 1.0f;
-                // close door
+            // Auto-close: after player enters, wait 2s then close
+            // Or auto-close after 8s if nobody enters
+            if (playerInsideLift && elevatorTimer > 2.0f) {
                 elevatorState = ELEV_DOOR_CLOSING;
+                elevatorTimer = 0.0f;
+            } else if (!playerInsideLift && elevatorTimer > 8.0f) {
+                elevatorState = ELEV_DOOR_CLOSING;
+                elevatorTimer = 0.0f;
             }
             break;
         case ELEV_DOOR_CLOSING:
-            elevatorDoorOffset = glm::max(elevatorDoorOffset - deltaTime * 1.0f, 0.0f);
+            elevatorDoorOffset = glm::max(elevatorDoorOffset - deltaTime * 1.2f, 0.0f);
             if (elevatorDoorOffset <= 0.0f) {
                 if (elevatorTargetFloor != elevatorCurrentFloor) {
                     elevatorState = ELEV_MOVING;
@@ -495,11 +504,11 @@ int main()
                 elevatorCurrentFloor = elevatorTargetFloor;
                 elevatorState = ELEV_DOOR_OPENING;
                 elevatorDoorOffset = 0.0f;
+                elevatorTimer = 0.0f;
             }
             break;
         }
         }
-        lKeyHeld = (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS);
 
         // ---- Shader Setup ----
         ls.use();
@@ -946,350 +955,426 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
     drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, -.02f, 0}, {79.5f, .08f, 79.5f}, texFloor, 12.0f, 32, .9f);
     ls.setBool("blendWithColor", false);
 
-    // Floor slabs for 1st and 2nd floor (with atrium + staircase + elevator cutouts)
+    // Floor slabs for 1st and 2nd floor
+    // Holes: Escalator X:-5..5 Z:10..32 (floor1 only)
+    //        L-Stair X:-22..-14 Z:10..24 (both floors)
+    //        R-Stair X:14..22 Z:10..24 (both floors)
+    //        Elevator X:-34..-28 Z:12..18 (both floors)
+    //        Atrium X:-10..10 Z:-20..-8 (floor1 only)
     for (int fl = 1; fl < 3; fl++) {
         float fy = FLOOR_Y[fl] - SLAB/2;
-        float hh = HOLE_HALF; // 6
-        // Staircase hole bounds for this floor
-        float shX1 = (fl==1) ? 16.f : 23.f; // left edge of stair hole
-        float shX2 = (fl==1) ? 24.f : 31.f; // right edge of stair hole
-        float shZ1 = 7.f, shZ2 = 18.f;      // Z range of stair hole
-
         ls.setBool("blendWithColor", true);
-        // Left strip (X:-40 to -6) — unchanged, no obstructions
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-(M/2+hh/2), fy, 0}, {M-hh, SLAB, 2*M}, texFloor, 8, 32, .9f);
-        // Front strip (X:-6 to 6, Z:6 to 40)
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, (M/2+hh/2)}, {2*hh, SLAB, M-hh}, texFloor, 8, 32, .9f);
-        // Back strip (X:-6 to 6, Z:-40 to -6) with elevator shaft hole (X:-2 to 2, Z:-15 to -11)
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, (-M-15.f)/2.f}, {2*hh, SLAB, M-15.f}, texFloor, 8, 32, .9f);
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, (-11.f-hh)/2.f}, {2*hh, SLAB, 11.f-hh}, texFloor, 8, 32, .9f);
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-4.f, fy, -13}, {4, SLAB, 4}, texFloor, 8, 32, .9f);
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {4.f, fy, -13}, {4, SLAB, 4}, texFloor, 8, 32, .9f);
-        // Right strip (X:6 to 40) — split around staircase hole
-        float rCX = (hh+M)/2.f, rW = M-hh; // center=23, width=34
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {rCX, fy, (-M+shZ1)/2.f}, {rW, SLAB, shZ1+M}, texFloor, 8, 32, .9f);
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {rCX, fy, (M+shZ2)/2.f}, {rW, SLAB, M-shZ2}, texFloor, 8, 32, .9f);
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {(hh+shX1)/2.f, fy, (shZ1+shZ2)/2.f}, {shX1-hh, SLAB, shZ2-shZ1}, texFloor, 8, 32, .9f);
-        drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {(shX2+M)/2.f, fy, (shZ1+shZ2)/2.f}, {M-shX2, SLAB, shZ2-shZ1}, texFloor, 8, 32, .9f);
+
+        if (fl == 1) {
+            // FLOOR 1 — all cutouts
+            // North band Z:-40 to -20 (full width, no holes)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, -30}, {80, SLAB, 20}, texFloor, 8, 32, .9f);
+            // Z:-20 to -8 sides only (atrium hole in center X:-10..10)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-25, fy, -14}, {30, SLAB, 12}, texFloor, 8, 32, .9f);
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {25, fy, -14}, {30, SLAB, 12}, texFloor, 8, 32, .9f);
+            // Z:-8 to 10 (full width, below escalator/stair holes)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, 1}, {80, SLAB, 18}, texFloor, 8, 32, .9f);
+            // Z:10 to 40 — strips around holes
+            // Far west X:-40..-37 (narrow strip beside elevator)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-38.5f, fy, 25}, {3, SLAB, 30}, texFloor, 8, 32, .9f);
+            // Elev shaft col X:-37..-31 (hole Z:22..28)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 16}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 34}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
+            // X:-31..-22
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-26.5f, fy, 25}, {9, SLAB, 30}, texFloor, 8, 32, .9f);
+            // L-stair col X:-22..-14 (hole Z:10..24)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-18, fy, 32}, {8, SLAB, 16}, texFloor, 8, 32, .9f);
+            // X:-14..-5
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-9.5f, fy, 25}, {9, SLAB, 30}, texFloor, 8, 32, .9f);
+            // Escalator col X:-5..5 (hole Z:10..32)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, 36}, {10, SLAB, 8}, texFloor, 8, 32, .9f);
+            // X:5..14
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {9.5f, fy, 25}, {9, SLAB, 30}, texFloor, 8, 32, .9f);
+            // R-stair col X:14..22 (hole Z:10..24)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {18, fy, 32}, {8, SLAB, 16}, texFloor, 8, 32, .9f);
+            // X:22..40
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {31, fy, 25}, {18, SLAB, 30}, texFloor, 8, 32, .9f);
+        } else {
+            // FLOOR 2 — only staircase + elevator holes (no escalator, no atrium)
+            // North Z:-40 to 10 (full width)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, -15}, {80, SLAB, 50}, texFloor, 8, 32, .9f);
+            // South Z:10 to 40 — strips around stair + elevator holes
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-38.5f, fy, 25}, {3, SLAB, 30}, texFloor, 8, 32, .9f);
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 16}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 34}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-26.5f, fy, 25}, {9, SLAB, 30}, texFloor, 8, 32, .9f);
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-18, fy, 32}, {8, SLAB, 16}, texFloor, 8, 32, .9f);
+            // Center X:-14..14 (no escalator hole on floor 2)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, 25}, {28, SLAB, 30}, texFloor, 8, 32, .9f);
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {18, fy, 32}, {8, SLAB, 16}, texFloor, 8, 32, .9f);
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {31, fy, 25}, {18, SLAB, 30}, texFloor, 8, 32, .9f);
+        }
         ls.setBool("blendWithColor", false);
 
-        // Glass railing around atrium cutout
-        float rH = 1.2f, rY = FLOOR_Y[fl] + rH/2;
-        drawCube(V, ls, I, C_GLASS, {-hh, rY, 0}, {.08f, rH, 2*hh}, 128, .3f);
-        drawCube(V, ls, I, C_GLASS, {hh, rY, 0}, {.08f, rH, 2*hh}, 128, .3f);
-        drawCube(V, ls, I, C_GLASS, {0, rY, -hh}, {2*hh, rH, .08f}, 128, .3f);
-        drawCube(V, ls, I, C_GLASS, {0, rY, hh}, {2*hh, rH, .08f}, 128, .3f);
-        drawCube(V, ls, I, C_LAMP, {-hh, FLOOR_Y[fl]+rH, 0}, {.1f, .05f, 2*hh});
-        drawCube(V, ls, I, C_LAMP, {hh, FLOOR_Y[fl]+rH, 0}, {.1f, .05f, 2*hh});
-        drawCube(V, ls, I, C_LAMP, {0, FLOOR_Y[fl]+rH, -hh}, {2*hh, .05f, .1f});
-        drawCube(V, ls, I, C_LAMP, {0, FLOOR_Y[fl]+rH, hh}, {2*hh, .05f, .1f});
+        // Glass railing around atrium cutout (only on 1st floor)
+        if (fl == 1) {
+            float rH = 1.2f, rY = FLOOR_Y[fl] + rH/2;
+            drawCube(V, ls, I, C_GLASS, {-10, rY, -14}, {.08f, rH, 12}, 128, .3f);
+            drawCube(V, ls, I, C_GLASS, {10, rY, -14}, {.08f, rH, 12}, 128, .3f);
+            drawCube(V, ls, I, C_GLASS, {0, rY, -20}, {20, rH, .08f}, 128, .3f);
+            drawCube(V, ls, I, C_GLASS, {0, rY, -8}, {20, rH, .08f}, 128, .3f);
+            drawCube(V, ls, I, C_LAMP, {-10, FLOOR_Y[fl]+rH, -14}, {.1f, .05f, 12});
+            drawCube(V, ls, I, C_LAMP, {10, FLOOR_Y[fl]+rH, -14}, {.1f, .05f, 12});
+            drawCube(V, ls, I, C_LAMP, {0, FLOOR_Y[fl]+rH, -20}, {20, .05f, .1f});
+            drawCube(V, ls, I, C_LAMP, {0, FLOOR_Y[fl]+rH, -8}, {20, .05f, .1f});
+        }
     }
 
-    // Ceilings for each floor (with matching staircase & elevator holes)
+    // Ceilings for each floor
     for (int fl = 0; fl < 3; fl++) {
         float cy = CEIL_Y[fl];
         if (fl == 2) {
             drawCube(V, ls, I, C_CEILING, {0, cy, 0}, {79.5f, .15f, 79.5f}); // roof
+        } else if (fl == 0) {
+            // Ground floor ceiling — same holes as floor 1 slab
+            // North Z:-40..-20 full
+            drawCube(V, ls, I, C_CEILING, {0, cy, -30}, {80, .1f, 20});
+            // Z:-20..-8 sides (atrium hole center)
+            drawCube(V, ls, I, C_CEILING, {-25, cy, -14}, {30, .1f, 12});
+            drawCube(V, ls, I, C_CEILING, {25, cy, -14}, {30, .1f, 12});
+            // Z:-8..10 full
+            drawCube(V, ls, I, C_CEILING, {0, cy, 1}, {80, .1f, 18});
+            // Z:10..40 strips (same pattern as floor 1 slab)
+            drawCube(V, ls, I, C_CEILING, {-38.5f, cy, 25}, {3, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {-34, cy, 16}, {6, .1f, 12});
+            drawCube(V, ls, I, C_CEILING, {-34, cy, 34}, {6, .1f, 12});
+            drawCube(V, ls, I, C_CEILING, {-26.5f, cy, 25}, {9, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {-18, cy, 32}, {8, .1f, 16});
+            drawCube(V, ls, I, C_CEILING, {-9.5f, cy, 25}, {9, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {0, cy, 36}, {10, .1f, 8});
+            drawCube(V, ls, I, C_CEILING, {9.5f, cy, 25}, {9, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {18, cy, 32}, {8, .1f, 16});
+            drawCube(V, ls, I, C_CEILING, {31, cy, 25}, {18, .1f, 30});
         } else {
-            // Staircase hole in ceiling — G→1 at X=16-24, 1→2 at X=23-31
-            float shX1 = (fl==0) ? 16.f : 23.f;
-            float shX2 = (fl==0) ? 24.f : 31.f;
-            float shZ1 = 7.f, shZ2 = 18.f;
-            float hh = HOLE_HALF;
-            // Left ceiling strip
-            drawCube(V, ls, I, C_CEILING, {-(M/2+hh/2), cy, 0}, {M-hh, .1f, 2*M});
-            // Front ceiling strip
-            drawCube(V, ls, I, C_CEILING, {0, cy, (M/2+hh/2)}, {2*hh, .1f, M-hh});
-            // Back ceiling strip (with elevator shaft hole)
-            drawCube(V, ls, I, C_CEILING, {0, cy, (-M-15.f)/2.f}, {2*hh, .1f, M-15.f});
-            drawCube(V, ls, I, C_CEILING, {0, cy, (-11.f-hh)/2.f}, {2*hh, .1f, 11.f-hh});
-            drawCube(V, ls, I, C_CEILING, {-4.f, cy, -13}, {4, .1f, 4});
-            drawCube(V, ls, I, C_CEILING, {4.f, cy, -13}, {4, .1f, 4});
-            // Right ceiling strip (with staircase hole)
-            float rCX = (hh+M)/2.f, rW = M-hh;
-            drawCube(V, ls, I, C_CEILING, {rCX, cy, (-M+shZ1)/2.f}, {rW, .1f, shZ1+M});
-            drawCube(V, ls, I, C_CEILING, {rCX, cy, (M+shZ2)/2.f}, {rW, .1f, M-shZ2});
-            drawCube(V, ls, I, C_CEILING, {(hh+shX1)/2.f, cy, (shZ1+shZ2)/2.f}, {shX1-hh, .1f, shZ2-shZ1});
-            drawCube(V, ls, I, C_CEILING, {(shX2+M)/2.f, cy, (shZ1+shZ2)/2.f}, {M-shX2, .1f, shZ2-shZ1});
+            // 1st floor ceiling — only staircase + elevator holes
+            drawCube(V, ls, I, C_CEILING, {0, cy, -15}, {80, .1f, 50});
+            drawCube(V, ls, I, C_CEILING, {-38.5f, cy, 25}, {3, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {-34, cy, 16}, {6, .1f, 12});
+            drawCube(V, ls, I, C_CEILING, {-34, cy, 34}, {6, .1f, 12});
+            drawCube(V, ls, I, C_CEILING, {-26.5f, cy, 25}, {9, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {-18, cy, 32}, {8, .1f, 16});
+            drawCube(V, ls, I, C_CEILING, {0, cy, 25}, {28, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {18, cy, 32}, {8, .1f, 16});
+            drawCube(V, ls, I, C_CEILING, {31, cy, 25}, {18, .1f, 30});
         }
     }
 
     // ============================================================
-    // CENTRAL ATRIUM (X:-10 to 10, Z:-10 to 10) — dramatic open space
-    // ============================================================
-    // (The atrium is just empty space — no geometry needed except the cutouts above)
-
-    // ============================================================
-    // DUAL ESCALATORS (Ground → 1st Floor, in atrium center)
-    // Left=UP, Right=DOWN, ~33 degree incline
-    // Bottom at Z=5.5, Top at Z=-5.5, Rise: 0 to 7.3
+    // DUAL ESCALATORS (Ground → 1st Floor, center near entrance)
+    // Bottom at Z=30 (near entrance), Top at Z=12, Rise: 0 to 7.3
     // ============================================================
     {
-        float esBottomZ = 5.5f, esTopZ = -5.5f;
+        float esBottomZ = 30.0f, esTopZ = 12.0f;
         float esRise = FLOOR_Y[1]; // 7.3
-        float esLen = esBottomZ - esTopZ; // 11
-        float esAngle = atan2(esRise, esLen); // ~33 deg
-        float esInclineLen = sqrt(esRise*esRise + esLen*esLen);
-        int numSteps = 24;
-        float stepIncline = esInclineLen / numSteps;
+        float esLen = esBottomZ - esTopZ; // 18
+        int numSteps = 30;
         float stepH = esRise / numSteps;
         float stepZ = esLen / numSteps;
-        float esW = 2.5f; // width of each escalator
+        float esW = 2.5f;
         float esGap = 0.5f;
+        float esCenterZ = (esBottomZ + esTopZ) / 2.0f; // 21
 
-        // For each escalator (0=left/UP, 1=right/DOWN)
         for (int esc = 0; esc < 2; esc++) {
             float esX = (esc == 0) ? -(esW/2 + esGap/2) : (esW/2 + esGap/2);
-            float dir = (esc == 0) ? 1.0f : -1.0f; // UP or DOWN step direction
 
             // Side panels (glass)
-            float panelCX = esX;
             float panelY = esRise/2;
-            drawCube(V, ls, I, C_GLASS, {panelCX - esW/2, panelY, 0}, {.08f, esRise+1, esLen+1}, 128, .25f);
-            drawCube(V, ls, I, C_GLASS, {panelCX + esW/2, panelY, 0}, {.08f, esRise+1, esLen+1}, 128, .25f);
+            drawCube(V, ls, I, C_GLASS, {esX - esW/2, panelY, esCenterZ}, {.08f, esRise+1, esLen+1}, 128, .25f);
+            drawCube(V, ls, I, C_GLASS, {esX + esW/2, panelY, esCenterZ}, {.08f, esRise+1, esLen+1}, 128, .25f);
 
-            // Handrails (black rubber)
-            drawCube(V, ls, I, C_TIRE, {panelCX - esW/2, esRise+.5f, 0}, {.1f, .06f, esLen});
-            drawCube(V, ls, I, C_TIRE, {panelCX + esW/2, esRise+.5f, 0}, {.1f, .06f, esLen});
+            // Handrails
+            drawCube(V, ls, I, C_TIRE, {esX - esW/2, esRise+.5f, esCenterZ}, {.1f, .06f, esLen});
+            drawCube(V, ls, I, C_TIRE, {esX + esW/2, esRise+.5f, esCenterZ}, {.1f, .06f, esLen});
 
-            // Inclined truss structure (triangular support under steps)
+            // Truss structure
             for (int ti = 0; ti < 6; ti++) {
                 float tt = (float)ti / 5;
                 float tZ = esBottomZ - tt * esLen;
                 float tY = tt * esRise;
-                drawCube(V, ls, I, C_LAMP*.7f, {panelCX, tY*.5f, tZ}, {esW-.3f, tY+.1f, .08f});
+                drawCube(V, ls, I, C_LAMP*.7f, {esX, tY*.5f, tZ}, {esW-.3f, tY+.1f, .08f});
             }
 
             // Animated steps
+            float dir = (esc == 0) ? 1.0f : -1.0f;
             float animOffset = fmod((float)glfwGetTime() * 0.3f, 1.0f) * stepH * dir;
             for (int i = 0; i < numSteps; i++) {
                 float t = (float)i / numSteps;
                 float sZ, sY;
-                if (esc == 0) { // UP: bottom(south) to top(north)
+                if (esc == 0) {
                     sZ = esBottomZ - t * esLen + animOffset * (esLen/esRise);
                     sY = t * esRise + animOffset;
-                } else { // DOWN: top(north) to bottom(south)
+                } else {
                     sZ = esTopZ + t * esLen - animOffset * (esLen/esRise);
                     sY = esRise - t * esRise - animOffset;
                 }
                 sY = glm::clamp(sY, 0.0f, esRise);
                 sZ = glm::clamp(sZ, esTopZ, esBottomZ);
-                // Step surface (dark gray with ribbed texture feel)
-                drawCube(V, ls, I, C_STAIR*1.05f, {panelCX, sY+.05f, sZ}, {esW-.4f, .1f, stepZ*.85f});
+                drawCube(V, ls, I, C_STAIR*1.05f, {esX, sY+.05f, sZ}, {esW-.4f, .1f, stepZ*.85f});
             }
 
             // Entry/exit platforms
-            drawCube(V, ls, I, C_STAIR, {panelCX, .05f, esBottomZ+1}, {esW, .1f, 2}); // bottom entry
-            drawCube(V, ls, I, C_STAIR, {panelCX, esRise+.05f, esTopZ-1}, {esW, .1f, 2}); // top exit
+            drawCube(V, ls, I, C_STAIR, {esX, .05f, esBottomZ+1}, {esW, .1f, 2});
+            drawCube(V, ls, I, C_STAIR, {esX, esRise+.05f, esTopZ-1}, {esW, .1f, 2});
         }
 
-        // Thin metal divider strip between escalators (NOT a solid wall)
-        drawCube(V, ls, I, C_LAMP, {0, .5f, 0}, {.08f, 1.0f, esLen}); // lower strip
-        drawCube(V, ls, I, C_LAMP, {0, esRise+.3f, 0}, {.08f, .06f, esLen}); // top rail
+        // Metal divider between escalators
+        drawCube(V, ls, I, C_LAMP, {0, .5f, esCenterZ}, {.08f, 1.0f, esLen});
+        drawCube(V, ls, I, C_LAMP, {0, esRise+.3f, esCenterZ}, {.08f, .06f, esLen});
     }
 
     // ============================================================
-    // ELEVATOR / LIFT (North side of atrium, X=0, Z=-13)
-    // 3-floor vertical shaft with glass front
+    // ELEVATOR / LIFT (West side, beside left staircase, X=-31, Z=15)
     // ============================================================
     {
-        float eX = 0, eZ = -13.f;
+        float eX = -34, eZ = 25.f;
         float shaftH = MH;
         // Shaft walls
-        drawCube(V, ls, I, C_GLASS, {eX, shaftH/2, eZ+1.75f}, {3.5f, shaftH, .08f}, 128, .2f); // South (glass, facing atrium)
-        drawCube(V, ls, I, C_CORR, {eX-1.75f, shaftH/2, eZ}, {.08f, shaftH, 3.5f});   // West
-        drawCube(V, ls, I, C_CORR, {eX+1.75f, shaftH/2, eZ}, {.08f, shaftH, 3.5f});   // East
-        drawCube(V, ls, I, C_CORR, {eX, shaftH/2, eZ-1.75f}, {3.5f, shaftH, .08f});   // North
-        // Shaft corner rails
-        drawCube(V, ls, I, C_LAMP, {eX-1.7f, shaftH/2, eZ+1.7f}, {.05f,shaftH,.05f});
-        drawCube(V, ls, I, C_LAMP, {eX+1.7f, shaftH/2, eZ+1.7f}, {.05f,shaftH,.05f});
-        drawCube(V, ls, I, C_LAMP, {eX-1.7f, shaftH/2, eZ-1.7f}, {.05f,shaftH,.05f});
-        drawCube(V, ls, I, C_LAMP, {eX+1.7f, shaftH/2, eZ-1.7f}, {.05f,shaftH,.05f});
+        drawCube(V, ls, I, C_CORR, {eX, shaftH/2, eZ+3}, {6, shaftH, WT});      // South
+        drawCube(V, ls, I, C_CORR, {eX-3, shaftH/2, eZ}, {WT, shaftH, 6});      // West
+        drawCube(V, ls, I, C_GLASS, {eX+3, shaftH/2, eZ}, {.08f, shaftH, 6}, 128, .2f); // East (glass facing corridor)
+        drawCube(V, ls, I, C_CORR, {eX, shaftH/2, eZ-3}, {6, shaftH, WT});      // North
+        // Corner rails
+        drawCube(V, ls, I, C_LAMP, {eX-2.9f, shaftH/2, eZ+2.9f}, {.05f,shaftH,.05f});
+        drawCube(V, ls, I, C_LAMP, {eX+2.9f, shaftH/2, eZ+2.9f}, {.05f,shaftH,.05f});
+        drawCube(V, ls, I, C_LAMP, {eX-2.9f, shaftH/2, eZ-2.9f}, {.05f,shaftH,.05f});
+        drawCube(V, ls, I, C_LAMP, {eX+2.9f, shaftH/2, eZ-2.9f}, {.05f,shaftH,.05f});
 
-        // Cabin (3x3x3 box)
+        // Cabin
         float cabY = elevatorY;
-        drawCube(V, ls, I, C_STAIR, {eX, cabY+.05f, eZ}, {3.f, .1f, 3.f}); // floor
-        drawCube(V, ls, I, C_CEILING, {eX, cabY+3.f, eZ}, {3.f, .1f, 3.f}); // ceiling
-        drawCube(V, ls, I, C_CORR, {eX-1.45f, cabY+1.5f, eZ}, {.08f, 3, 3}); // left wall
-        drawCube(V, ls, I, C_CORR, {eX+1.45f, cabY+1.5f, eZ}, {.08f, 3, 3}); // right wall
-        drawCube(V, ls, I, C_CORR, {eX, cabY+1.5f, eZ-1.45f}, {3, 3, .08f}); // back wall
+        drawCube(V, ls, I, C_STAIR, {eX, cabY+.05f, eZ}, {5.f, .1f, 5.f});
+        drawCube(V, ls, I, C_CEILING, {eX, cabY+3.f, eZ}, {5.f, .1f, 5.f});
+        drawCube(V, ls, I, C_CORR, {eX-2.45f, cabY+1.5f, eZ}, {.08f, 3, 5});
+        drawCube(V, ls, I, C_CORR, {eX, cabY+1.5f, eZ-2.45f}, {5, 3, .08f});
+        drawCube(V, ls, I, C_CORR, {eX, cabY+1.5f, eZ+2.45f}, {5, 3, .08f});
 
-        // Sliding doors on south face (Z = eZ+1.5)
-        float doorHalf = 1.4f * (1.f - elevatorDoorOffset);
+        // Sliding doors (east face, facing corridor)
+        float doorHalf = 2.0f * (1.f - elevatorDoorOffset);
         if (doorHalf > 0.05f) {
-            drawCube(V, ls, I, C_GLASS, {eX-doorHalf*.5f-.05f, cabY+1.5f, eZ+1.5f}, {doorHalf, 2.8f, .06f}, 128, .25f);
-            drawCube(V, ls, I, C_GLASS, {eX+doorHalf*.5f+.05f, cabY+1.5f, eZ+1.5f}, {doorHalf, 2.8f, .06f}, 128, .25f);
+            drawCube(V, ls, I, C_GLASS, {eX+2.5f, cabY+1.5f, eZ-doorHalf*.5f-.05f}, {.06f, 2.8f, doorHalf}, 128, .25f);
+            drawCube(V, ls, I, C_GLASS, {eX+2.5f, cabY+1.5f, eZ+doorHalf*.5f+.05f}, {.06f, 2.8f, doorHalf}, 128, .25f);
         }
 
-        // Inside panel (back wall buttons)
-        drawCube(V, ls, I, C_LAMP, {eX+.5f, cabY+1.5f, eZ-1.4f}, {.2f, .5f, .05f});
-        drawCube(V, ls, I, {.2f,.8f,.2f}, {eX+.5f, cabY+1.7f, eZ-1.38f}, {.08f,.08f,.03f}); // G
-        drawCube(V, ls, I, {.8f,.8f,.2f}, {eX+.5f, cabY+1.5f, eZ-1.38f}, {.08f,.08f,.03f}); // 1
-        drawCube(V, ls, I, {.8f,.2f,.2f}, {eX+.5f, cabY+1.3f, eZ-1.38f}, {.08f,.08f,.03f}); // 2
+        // Inside panel buttons
+        drawCube(V, ls, I, C_LAMP, {eX-2.3f, cabY+1.5f, eZ+.5f}, {.05f, .5f, .2f});
+        drawCube(V, ls, I, {.2f,.8f,.2f}, {eX-2.28f, cabY+1.7f, eZ+.5f}, {.03f,.08f,.08f});
+        drawCube(V, ls, I, {.8f,.8f,.2f}, {eX-2.28f, cabY+1.5f, eZ+.5f}, {.03f,.08f,.08f});
+        drawCube(V, ls, I, {.8f,.2f,.2f}, {eX-2.28f, cabY+1.3f, eZ+.5f}, {.03f,.08f,.08f});
 
-        // Call button panels on each floor (outside, south side)
+        // Call buttons on each floor (outside, east side)
         for (int fl = 0; fl < 3; fl++) {
             float btnY = FLOOR_Y[fl] + 1.2f;
-            drawCube(V, ls, I, C_LAMP, {eX+2, btnY, eZ+1.9f}, {.2f, .4f, .1f});
-            drawCube(V, ls, I, {.2f,.8f,.2f}, {eX+2, btnY+.1f, eZ+1.96f}, {.06f,.06f,.03f});
-            drawCube(V, ls, I, {.8f,.2f,.2f}, {eX+2, btnY-.1f, eZ+1.96f}, {.06f,.06f,.03f});
+            drawCube(V, ls, I, C_LAMP, {eX+3.2f, btnY, eZ}, {.1f, .4f, .2f});
+            drawCube(V, ls, I, {.2f,.8f,.2f}, {eX+3.26f, btnY+.1f, eZ}, {.03f,.06f,.06f});
+            drawCube(V, ls, I, {.8f,.2f,.2f}, {eX+3.26f, btnY-.1f, eZ}, {.03f,.06f,.06f});
         }
     }
 
     // ============================================================
-    // STAIRCASE (South side of atrium, X=20, Z=10-15)
-    // Switchback: G→1 goes south-to-north, 1→2 goes north-to-south
+    // DUAL STAIRCASES (Both sides, all floors)
+    // Left: X=-22..-14, Z=10..24   Right: X=14..22, Z=10..24
+    // Switchback: G→1 goes south-north, 1→2 goes north-south (offset in X)
     // ============================================================
     {
-        float stW = 4.0f; // width in X (X=18 to 22)
-        // Flight G→1: Z goes from 15(bottom) to 10(top), X=18 to 22
         int ns = 14;
-        for (int i = 0; i < ns; i++) {
-            float sz = 15.f - i * (5.f/ns);
-            float sy = i * (FLOOR_Y[1] / ns);
-            drawCube(V, ls, I, C_STAIR, {20, sy + .25f, sz}, {stW, .5f, 5.f/ns * .95f});
-        }
-        // Landing at top of flight 1
-        drawCube(V, ls, I, C_STAIR, {20, FLOOR_Y[1]-.15f, 9}, {stW, SLAB, 2});
+        float stW = 3.5f;
+        float stDepth = 14.0f; // Z range: 10 to 24
 
-        // Flight 1→2: Z goes from 10(bottom) to 15(top), X=25 to 29 (parallel offset)
-        for (int i = 0; i < ns; i++) {
-            float sz = 10.f + i * (5.f/ns);
-            float sy = FLOOR_Y[1] + i * ((FLOOR_Y[2]-FLOOR_Y[1]) / ns);
-            drawCube(V, ls, I, C_STAIR, {27, sy + .25f, sz}, {stW, .5f, 5.f/ns * .95f});
-        }
-        // Landing at top of flight 2
-        drawCube(V, ls, I, C_STAIR, {27, FLOOR_Y[2]-.15f, 16}, {stW, SLAB, 2});
+        // Draw both staircases (mirror)
+        float stairCentersX[] = {-18.0f, 18.0f};
+        for (int side = 0; side < 2; side++) {
+            float baseX = stairCentersX[side];
+            float xOff1 = (side == 0) ? -2.0f : 2.0f; // first flight offset
+            float xOff2 = (side == 0) ? 2.0f : -2.0f;  // second flight offset
 
-        // Railings (along both flights)
-        drawCube(V, ls, I, C_LAMP, {18, FLOOR_Y[1]/2+1, 12.5f}, {.08f, FLOOR_Y[1]+2, .08f});
-        drawCube(V, ls, I, C_LAMP, {22, FLOOR_Y[1]/2+1, 12.5f}, {.08f, FLOOR_Y[1]+2, .08f});
-        drawCube(V, ls, I, C_LAMP, {25, FLOOR_Y[1]+3, 12.5f}, {.08f, FLOOR_H+2, .08f});
-        drawCube(V, ls, I, C_LAMP, {29, FLOOR_Y[1]+3, 12.5f}, {.08f, FLOOR_H+2, .08f});
-        // Handrail bars
-        drawCube(V, ls, I, C_LAMP, {18, FLOOR_Y[1]+.5f, 12.5f}, {.04f, .04f, 6});
-        drawCube(V, ls, I, C_LAMP, {22, FLOOR_Y[1]+.5f, 12.5f}, {.04f, .04f, 6});
-        drawCube(V, ls, I, C_LAMP, {25, FLOOR_Y[2]+.5f, 12.5f}, {.04f, .04f, 6});
-        drawCube(V, ls, I, C_LAMP, {29, FLOOR_Y[2]+.5f, 12.5f}, {.04f, .04f, 6});
+            // Flight G→1: Z goes from 23(bottom) to 14(top)
+            for (int i = 0; i < ns; i++) {
+                float sz = 23.f - i * (9.f/ns);
+                float sy = i * (FLOOR_Y[1] / ns);
+                drawCube(V, ls, I, C_STAIR, {baseX + xOff1, sy + .25f, sz}, {stW, .5f, 9.f/ns * .95f});
+            }
+            // Landing at top G→1
+            drawCube(V, ls, I, C_STAIR, {baseX, FLOOR_Y[1]-.15f, 13}, {stW*2+1, SLAB, 2});
+
+            // Flight 1→2: Z goes from 14(bottom) to 23(top), offset in X
+            for (int i = 0; i < ns; i++) {
+                float sz = 14.f + i * (9.f/ns);
+                float sy = FLOOR_Y[1] + i * ((FLOOR_Y[2]-FLOOR_Y[1]) / ns);
+                drawCube(V, ls, I, C_STAIR, {baseX + xOff2, sy + .25f, sz}, {stW, .5f, 9.f/ns * .95f});
+            }
+            // Landing at top 1→2
+            drawCube(V, ls, I, C_STAIR, {baseX, FLOOR_Y[2]-.15f, 24}, {stW*2+1, SLAB, 2});
+
+            // Open staircases (no enclosure walls, just railings)
+
+            // Railings
+            drawCube(V, ls, I, C_LAMP, {baseX+xOff1-stW/2, FLOOR_Y[1]/2+1, 18.5f}, {.08f, FLOOR_Y[1]+2, .08f});
+            drawCube(V, ls, I, C_LAMP, {baseX+xOff1+stW/2, FLOOR_Y[1]/2+1, 18.5f}, {.08f, FLOOR_Y[1]+2, .08f});
+            drawCube(V, ls, I, C_LAMP, {baseX+xOff2-stW/2, FLOOR_Y[1]+3, 18.5f}, {.08f, FLOOR_H+2, .08f});
+            drawCube(V, ls, I, C_LAMP, {baseX+xOff2+stW/2, FLOOR_Y[1]+3, 18.5f}, {.08f, FLOOR_H+2, .08f});
+            // Handrail bars
+            drawCube(V, ls, I, C_LAMP, {baseX+xOff1-stW/2, FLOOR_Y[1]+.5f, 18.5f}, {.04f, .04f, 10});
+            drawCube(V, ls, I, C_LAMP, {baseX+xOff1+stW/2, FLOOR_Y[1]+.5f, 18.5f}, {.04f, .04f, 10});
+            drawCube(V, ls, I, C_LAMP, {baseX+xOff2-stW/2, FLOOR_Y[2]+.5f, 18.5f}, {.04f, .04f, 10});
+            drawCube(V, ls, I, C_LAMP, {baseX+xOff2+stW/2, FLOOR_Y[2]+.5f, 18.5f}, {.04f, .04f, 10});
+        }
     }
 
     // ============================================================
-    // GROUND FLOOR SHOPS (perimeter, 10 shops)
+    // GROUND FLOOR — ONLY 2 SHOPS (Tech NW, Clothing NE)
     // ============================================================
     {
-        struct ShopDef { float cx, cz, sx, sz; const char* name; glm::vec3 wallCol; unsigned int banner; };
-        ShopDef shops[] = {
-            {-30, 32, 16, 12, "Tech", C_TECH_WALL, texTech},
-            {-14, 32, 8, 12, "Phones", C_TECH_WALL, texTech},
-            {14, 32, 8, 12, "Fashion", C_FASH_WALL, texFashion},
-            {30, 32, 16, 12, "Shoes", C_FASH_WALL, texFashion},
-            {-34, 0, 8, 20, "Books", C_BOOK_WALL, 0},
-            {-34, -25, 8, 20, "Prayer", C_PRAY_WALL, 0},
-            {34, 0, 8, 20, "Gems", C_GEM_WALL, texGems},
-            {34, -25, 8, 20, "Food", C_STALL_RED, texFood},
-            {-25, -34, 20, 8, "Cafe", C_STALL_YEL, texFood},
-            {25, -34, 20, 8, "Games", C_STALL_GRN, 0},
-        };
-        int nShops = 10;
-        for (int si = 0; si < nShops; si++) {
-            auto& sh = shops[si];
-            float fy = FLOOR_H / 2;
-            // Back wall
-            drawCube(V, ls, I, sh.wallCol, {sh.cx, fy, sh.cz}, {sh.sx, FLOOR_H, WT});
-            // Side walls (short sides)
-            float hw = sh.sx / 2, hd = sh.sz / 2;
+        float shopH = FLOOR_H / 2;
+        float shopDepth = 28.0f; // Z: -38 to -10
+        float shopWidth = 26.0f; // X: ±12 to ±38
+
+        // === SHOP 1: TECH SHOP (NW corner) ===
+        // Bounds: X=-38 to -12, Z=-38 to -10
+        {
+            float cx = -25, cz = -24;
             // Floor
-            drawCube(V, ls, I, sh.wallCol * .9f, {sh.cx, .02f, sh.cz - hd + sh.sz/2 * (sh.sz > sh.sx ? 0 : 0)}, {sh.sx, .04f, sh.sz});
-            // Glass facade (front, with gap for door)
-            float facadeZ = (sh.sz > sh.sx) ? sh.cz : sh.cz - hd;
-            float glassH = FLOOR_H * .7f;
-            // Simple glass front
-            if (sh.sx > sh.sz) { // wide shop (N/S wall)
-                drawCube(V, ls, I, C_GLASS, {sh.cx - hw*.6f, glassH/2, sh.cz-hd}, {sh.sx*.35f, glassH, .08f}, 128, .3f);
-                drawCube(V, ls, I, C_GLASS, {sh.cx + hw*.6f, glassH/2, sh.cz-hd}, {sh.sx*.35f, glassH, .08f}, 128, .3f);
-            } else { // deep shop (E/W wall)
-                drawCube(V, ls, I, C_GLASS, {sh.cx+(sh.cx>0?-1:1)*hw, glassH/2, sh.cz - hd*.6f}, {.08f, glassH, sh.sz*.35f}, 128, .3f);
-                drawCube(V, ls, I, C_GLASS, {sh.cx+(sh.cx>0?-1:1)*hw, glassH/2, sh.cz + hd*.6f}, {.08f, glassH, sh.sz*.35f}, 128, .3f);
+            drawCube(V, ls, I, C_TECH_FLOOR, {cx, .02f, cz}, {shopWidth, .04f, shopDepth});
+            // Back wall (north, Z=-38)
+            drawCube(V, ls, I, C_TECH_WALL, {cx, shopH, -38}, {shopWidth, FLOOR_H, WT});
+            // West wall (X=-38, already exterior)
+            // East wall (X=-12)
+            drawCube(V, ls, I, C_TECH_WALL, {-12, shopH, cz}, {WT, FLOOR_H, shopDepth});
+            // Front wall (south, Z=-10) with glass facade
+            drawCube(V, ls, I, C_TECH_WALL, {cx-8, shopH, -10}, {10, FLOOR_H, WT}); // left section
+            drawCube(V, ls, I, C_TECH_WALL, {cx+8, shopH, -10}, {10, FLOOR_H, WT}); // right section
+            // Glass facade (center gap for entrance)
+            float glassH = FLOOR_H * .75f;
+            drawCube(V, ls, I, C_GLASS, {cx-4, glassH/2, -10}, {6, glassH, .08f}, 128, .3f);
+            drawCube(V, ls, I, C_GLASS, {cx+4, glassH/2, -10}, {6, glassH, .08f}, 128, .3f);
+            // Banner
+            drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {cx, FLOOR_H-.5f, -10.1f}, {14, 1.5f, .12f}, texTech, 1, 16);
+            // Display tables (tech products)
+            for (int r = 0; r < 2; r++)
+                for (int c = 0; c < 3; c++) {
+                    float tx = -34+c*8.f, tz = -32+r*12.f;
+                    drawCube(V, ls, I, C_DISP_TABLE, {tx, .45f, tz}, {3, .9f, 2});
+                    drawCube(V, ls, I, C_DISP_BASE, {tx, .02f, tz}, {2.5f, .04f, 1.5f});
+                    drawCube(V, ls, I, C_PHONE, {tx-.5f, .95f, tz}, {.4f, .02f, .7f});
+                    drawCube(V, ls, I, C_LAPTOP, {tx+.5f, .95f, tz}, {.8f, .03f, .5f});
+                    drawCube(V, ls, I, C_SCREEN, {tx+.5f, 1.1f, tz-.2f}, {.78f, .3f, .02f});
+                }
+        }
+
+        // === SHOP 2: CLOTHING SHOP (NE corner) ===
+        // Bounds: X=12 to 38, Z=-38 to -10
+        {
+            float cx = 25, cz = -24;
+            // Floor
+            drawCube(V, ls, I, C_FASH_FLOOR, {cx, .02f, cz}, {shopWidth, .04f, shopDepth});
+            // Back wall (north, Z=-38)
+            drawCube(V, ls, I, C_FASH_WALL, {cx, shopH, -38}, {shopWidth, FLOOR_H, WT});
+            // East wall (X=38, already exterior)
+            // West wall (X=12)
+            drawCube(V, ls, I, C_FASH_WALL, {12, shopH, cz}, {WT, FLOOR_H, shopDepth});
+            // Front wall (south, Z=-10) with glass facade
+            drawCube(V, ls, I, C_FASH_WALL, {cx-8, shopH, -10}, {10, FLOOR_H, WT});
+            drawCube(V, ls, I, C_FASH_WALL, {cx+8, shopH, -10}, {10, FLOOR_H, WT});
+            // Glass facade
+            float glassH = FLOOR_H * .75f;
+            drawCube(V, ls, I, C_GLASS, {cx-4, glassH/2, -10}, {6, glassH, .08f}, 128, .3f);
+            drawCube(V, ls, I, C_GLASS, {cx+4, glassH/2, -10}, {6, glassH, .08f}, 128, .3f);
+            // Banner
+            drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {cx, FLOOR_H-.5f, -10.1f}, {14, 1.5f, .12f}, texFashion, 1, 16);
+            // Clothing racks and mannequins
+            for (int r = 0; r < 3; r++) {
+                float rz = -34+r*10.f;
+                // Clothing rack (metal bar with hangers)
+                drawCube(V, ls, I, C_RACK, {cx-6, 2.0f, rz}, {.08f, 4, .08f});
+                drawCube(V, ls, I, C_RACK, {cx-6, 3.8f, rz}, {4, .08f, .08f});
+                // Mannequin
+                drawCube(V, ls, I, C_MANNEQUIN, {cx+4, 1.5f, rz}, {.6f, 3, .3f});
+                drawCube(V, ls, I, C_MANNEQUIN, {cx+4, 3.2f, rz}, {.3f, .3f, .3f}); // head
             }
-            // Shop sign / banner above entrance
-            if (sh.banner != 0) {
-                if (sh.sx > sh.sz)
-                    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {sh.cx, FLOOR_H-.5f, sh.cz-hd-.08f}, {sh.sx*.6f, 1.5f, .12f}, sh.banner, 1, 16);
-                else
-                    drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {sh.cx+(sh.cx>0?-1:1)*hw-.08f, FLOOR_H-.5f, sh.cz}, {.12f, 1.5f, sh.sz*.6f}, sh.banner, 1, 16);
-            }
+            // Cash desk
+            drawCube(V, ls, I, C_CASH_DESK, {cx+8, .55f, -14}, {3, 1.1f, 2});
+            // Mirror
+            drawCube(V, ls, I, C_MIRROR, {37.8f, 2.5f, -28}, {.06f, 4, 3}, 128, .2f);
         }
     }
 
     // ============================================================
-    // WASHROOM (NW area, X:-38 to -28, Z:-8 to 0)
+    // ATRIUM (Back center, X:-10 to 10, Z:-20 to -8)
+    // Open space with decorative floor, visible through 1st floor cutout
     // ============================================================
     {
-        float wX = -33, wZ = -4;
-        drawCube(V, ls, I, C_WASH, {wX, .03f, wZ}, {10, .04f, 8}); // floor
-        drawCube(V, ls, I, C_WASH*.95f, {wX, FLOOR_H/2, wZ-4}, {10, FLOOR_H, WT}); // back wall
-        drawCube(V, ls, I, C_WASH*.95f, {wX, FLOOR_H/2, wZ+4}, {10, FLOOR_H, WT}); // front wall with gap
+        // Atrium decorative floor
+        drawCube(V, ls, I, C_FLOOR*1.1f, {0, .03f, -14}, {20, .04f, 12});
+        // Decorative border
+        drawCube(V, ls, I, C_LAMP, {0, .06f, -14}, {16, .02f, .15f});
+        drawCube(V, ls, I, C_LAMP, {0, .06f, -20}, {20, .02f, .15f});
+        drawCube(V, ls, I, C_LAMP, {0, .06f, -8}, {20, .02f, .15f});
+        drawCube(V, ls, I, C_LAMP, {-10, .06f, -14}, {.15f, .02f, 12});
+        drawCube(V, ls, I, C_LAMP, {10, .06f, -14}, {.15f, .02f, 12});
+        // Center decorative columns around atrium
+        float colR = 0.3f;
+        drawCube(V, ls, I, C_LAMP, {-9, FLOOR_H/2, -9}, {colR, FLOOR_H, colR});
+        drawCube(V, ls, I, C_LAMP, {9, FLOOR_H/2, -9}, {colR, FLOOR_H, colR});
+        drawCube(V, ls, I, C_LAMP, {-9, FLOOR_H/2, -19}, {colR, FLOOR_H, colR});
+        drawCube(V, ls, I, C_LAMP, {9, FLOOR_H/2, -19}, {colR, FLOOR_H, colR});
+    }
+
+    // ============================================================
+    // WASHROOM (East side, beside right staircase, X=24..38, Z=8..20)
+    // ============================================================
+    {
+        float wX = 31, wZ = 14;
+        drawCube(V, ls, I, C_WASH, {wX, .03f, wZ}, {14, .04f, 12}); // floor
+        // Walls (enclosed room)
+        drawCube(V, ls, I, C_WASH*.95f, {wX, FLOOR_H/2, 8}, {14, FLOOR_H, WT});   // north wall
+        drawCube(V, ls, I, C_WASH*.95f, {wX, FLOOR_H/2, 20}, {14, FLOOR_H, WT});  // south wall
+        // West wall (facing corridor, with door gap)
+        drawCube(V, ls, I, C_WASH*.95f, {24, FLOOR_H/2, 11}, {WT, FLOOR_H, 6});   // left of door
+        drawCube(V, ls, I, C_WASH*.95f, {24, FLOOR_H/2, 17}, {WT, FLOOR_H, 6});   // right of door
+        // East wall (X=38, exterior already drawn)
         // Stall partitions
         for (int i = 0; i < 4; i++) {
-            float px = -37 + i * 2.5f;
-            drawCube(V, ls, I, C_WASH*.88f, {px, 1.2f, wZ}, {.08f, 2.2f, 5});
-            // Stall doors (partially open for visual)
+            float pz = 10 + i * 2.5f;
+            drawCube(V, ls, I, C_WASH*.88f, {wX, 1.2f, pz}, {8, 2.2f, .08f});
             if (i < 3) {
                 float doorAngle = (i == 1) ? 30.f : 0.f;
-                glm::mat4 dm = glm::translate(I, {px+1.25f, 1.0f, wZ+2.2f});
+                glm::mat4 dm = glm::translate(I, {wX-2, 1.0f, pz+1.25f});
                 if (doorAngle > 0) dm = glm::rotate(dm, glm::radians(doorAngle), {0,1,0});
-                drawCube(V, ls, dm, C_WASH*.85f, {0, 0, 0}, {2.3f, 1.8f, .06f});
-                // Door knob
-                drawCube(V, ls, dm, C_LAMP, {.9f, 0, .04f}, {.06f, .06f, .04f});
+                drawCube(V, ls, dm, C_WASH*.85f, {0, 0, 0}, {1.8f, 1.8f, .06f});
+                drawCube(V, ls, dm, C_LAMP, {0, 0, .04f}, {.06f, .06f, .04f});
             }
         }
         // Washroom sign
-        drawCube(V, ls, I, C_LAMP, {wX, FLOOR_H-.3f, wZ+4.1f}, {2, .6f, .08f});
+        drawCube(V, ls, I, C_LAMP, {24.1f, FLOOR_H-.3f, 14}, {.08f, .6f, 2});
     }
 
     // ============================================================
-    // 1ST FLOOR — Open floor, glass railing, perimeter (mostly empty)
+    // INTERIOR DIVIDING WALLS (ground floor corridor structure)
     // ============================================================
-    // (Floor slab and glass railing already drawn in the floor section above)
-    // Add some perimeter walls for structure
+    {
+        float midY = FLOOR_H / 2;
+        // Wall between corridor and shop area (Z=-8 line, center gap for atrium)
+        // Already drawn as shop front walls above
+        // Corridor side walls guiding traffic flow
+        // West corridor wall (between lift area and shop1)
+        drawCube(V, ls, I, C_CORR, {-12, midY, 1}, {WT, FLOOR_H, 18}); // X=-12 from Z=-8 to Z=10
+        // East corridor wall (between washroom area and shop2)
+        drawCube(V, ls, I, C_CORR, {12, midY, 1}, {WT, FLOOR_H, 18}); // X=12 from Z=-8 to Z=10
+    }
+
+    // ============================================================
+    // UPPER FLOOR WALLS (1st & 2nd floor structure)
+    // ============================================================
     for (int fl = 1; fl < 3; fl++) {
-        float baseY = FLOOR_Y[fl];
-        float midY = baseY + FLOOR_H/2;
-        // Interior perimeter walls (lower half only, for visual containment)
-        // These are thinner guide walls inside the building at each floor
+        float midY = FLOOR_Y[fl] + FLOOR_H/2;
         if (fl == 1) {
-            // Some corridor walls on 1st floor
-            drawCube(V, ls, I, C_CORR, {-30, midY, 30}, {16, FLOOR_H, WT});
-            drawCube(V, ls, I, C_CORR, {30, midY, 30}, {16, FLOOR_H, WT});
+            // 1st floor corridor walls
             drawCube(V, ls, I, C_CORR, {-30, midY, -30}, {16, FLOOR_H, WT});
             drawCube(V, ls, I, C_CORR, {30, midY, -30}, {16, FLOOR_H, WT});
         }
-    }
-
-    // ============================================================
-    // FOOD COURT (Ground floor, north area Z:-38 to -28)
-    // ============================================================
-    {
-        drawCube(V, ls, I, C_FOOD_FLOOR, {0, .03f, -33}, {79.5f, .04f, 14});
-        // Food stalls along north wall
-        float stallX[] = {-30, -15, 5, 25};
-        glm::vec3 stallC[] = {C_STALL_RED, C_STALL_YEL, C_STALL_GRN, C_STALL_ORG};
-        for (int i = 0; i < 4; i++) {
-            drawCube(V, ls, I, stallC[i], {stallX[i], 3.5f, -39}, {8, FLOOR_H, 1});
-            drawCube(V, ls, I, C_COUNTER, {stallX[i], .55f, -37.5f}, {6, 1.1f, 2});
-        }
-        // Seating tables with bezier tops
-        for (int r = 0; r < 2; r++)
-            for (int c = 0; c < 5; c++) {
-                float tx = -30+c*13.f, tz = -30-r*4.f;
-                glm::mat4 ftm = glm::translate(I, {tx, 0.75f, tz});
-                bezierTable->draw(ls, ftm, C_TABLE, 64.0f);
-                drawCube(V, ls, I, C_TABLE*.7f, {tx,.37f,tz}, {.08f,.72f,.08f});
-                drawCube(V, ls, I, C_CHAIR, {tx-.8f,.45f,tz}, {.4f,.05f,.4f});
-                drawCube(V, ls, I, C_CHAIR, {tx-.8f,.7f,tz-.18f}, {.4f,.45f,.05f});
-                drawCube(V, ls, I, C_CHAIR, {tx+.8f,.45f,tz}, {.4f,.05f,.4f});
-                drawCube(V, ls, I, C_CHAIR, {tx+.8f,.7f,tz+.18f}, {.4f,.45f,.05f});
-            }
     }
 
     // ============================================================
@@ -1334,8 +1419,9 @@ void processInput(GLFWwindow *w)
     // 3-Storey Mall height constraints and overrides
     float x = basic_camera.eye.x, z = basic_camera.eye.z;
 
-    // Escalator ride override
-    bool onEscalator = (x >= -22.5f && x <= -17.5f && z >= -6 && z <= 6 && basic_camera.eye.y < FLOOR_Y[1]+1);
+    // Escalator ride override (escalator is at X:-4..4, Z:12..30)
+    // Height depends on position, not direction — both escalators have same height mapping
+    bool onEscalator = (x >= -4.f && x <= 4.f && z >= 12 && z <= 30 && basic_camera.eye.y < FLOOR_Y[2]);
     if (!onEscalator) {
         // Normal height constraints
         float targetY = 1.7f;
@@ -1343,43 +1429,51 @@ void processInput(GLFWwindow *w)
         if (basic_camera.eye.y > FLOOR_Y[2]) targetY = FLOOR_Y[2] + 1.7f;
         else if (basic_camera.eye.y > FLOOR_Y[1]) targetY = FLOOR_Y[1] + 1.7f;
 
-        // Inside Elevator override
-        bool inLift = (x >= -2 && x <= 2 && z >= -15 && z <= -11);
+        // Inside Elevator override (lift at X:-37..-31, Z:22..28)
+        bool inLift = (x >= -37 && x <= -31 && z >= 22 && z <= 28);
         if (inLift) {
             targetY = elevatorY + 1.7f;
         }
         else {
-            // Staircase constraints
-            // G->1 (X:18-22, Z:10-15) South-to-North
-            bool onStairG1 = (x >= 18 && x <= 22 && z >= 10 && z <= 15);
-            if (onStairG1) {
-                float t = (15.f - z) / 5.f; // 0 at bottom, 1 at top
+            // Left staircase G->1 (X:-20, Z:23 to 14, south-to-north)
+            bool onLStairG1 = (x >= -22 && x <= -14 && z >= 14 && z <= 23);
+            if (onLStairG1) {
+                float t = (23.f - z) / 9.f;
                 t = glm::clamp(t, 0.f, 1.f);
                 targetY = FLOOR_Y[0] + t * (FLOOR_Y[1]-FLOOR_Y[0]) + 1.7f;
             }
-            // Landing 1
-            if (x >= 18 && x <= 22 && z >= 8 && z < 10) targetY = FLOOR_Y[1] + 1.7f;
-
-            // 1->2 (X:25-29, Z:10-15) North-to-South
-            bool onStair12 = (x >= 25 && x <= 29 && z >= 10 && z <= 15);
-            if (onStair12) {
-                float t = (z - 10.f) / 5.f; // 0 at bottom, 1 at top
+            // Left staircase 1->2 (X:-16, Z:14 to 23, north-to-south)
+            bool onLStair12 = (x >= -22 && x <= -14 && z >= 14 && z <= 23 && basic_camera.eye.y > FLOOR_Y[1]-1);
+            if (onLStair12 && basic_camera.eye.y > FLOOR_Y[1]) {
+                float t = (z - 14.f) / 9.f;
                 t = glm::clamp(t, 0.f, 1.f);
                 targetY = FLOOR_Y[1] + t * (FLOOR_Y[2]-FLOOR_Y[1]) + 1.7f;
             }
+            if (x >= -22 && x <= -14 && z >= 12 && z < 14) targetY = FLOOR_Y[1] + 1.7f;
+
+            // Right staircase G->1 (X:20, Z:23 to 14)
+            bool onRStairG1 = (x >= 14 && x <= 22 && z >= 14 && z <= 23);
+            if (onRStairG1) {
+                float t = (23.f - z) / 9.f;
+                t = glm::clamp(t, 0.f, 1.f);
+                targetY = FLOOR_Y[0] + t * (FLOOR_Y[1]-FLOOR_Y[0]) + 1.7f;
+            }
+            bool onRStair12 = (x >= 14 && x <= 22 && z >= 14 && z <= 23 && basic_camera.eye.y > FLOOR_Y[1]-1);
+            if (onRStair12 && basic_camera.eye.y > FLOOR_Y[1]) {
+                float t = (z - 14.f) / 9.f;
+                t = glm::clamp(t, 0.f, 1.f);
+                targetY = FLOOR_Y[1] + t * (FLOOR_Y[2]-FLOOR_Y[1]) + 1.7f;
+            }
+            if (x >= 14 && x <= 22 && z >= 12 && z < 14) targetY = FLOOR_Y[1] + 1.7f;
         }
         // Smooth height transition
         basic_camera.eye.y = glm::mix(basic_camera.eye.y, targetY, deltaTime * 10.0f);
     } else {
-        // On escalator: automatic movement logic
-        // Use left escalator for UP, right for DOWN
-        int esc = (x < -20.0f) ? 0 : 1; // 0=UP, 1=DOWN
-        float dir = (esc == 0) ? 1.0f : -1.0f;
-        // Esc rise from Z=5.5 to Z=-5.5
-        float t = (5.5f - z) / 11.0f;
+        // On escalator: height depends ONLY on Z position (same for both UP and DOWN)
+        // Z=30 (near entrance) = ground level, Z=12 (far end) = 1st floor level
+        float t = (30.f - z) / 18.0f;
         t = glm::clamp(t, 0.f, 1.f);
         basic_camera.eye.y = t * FLOOR_Y[1] + 1.7f;
-        if (esc == 1) basic_camera.eye.y = (1.0f-t) * FLOOR_Y[1] + 1.7f; // Down goes other way
     }
 }
 void key_callback(GLFWwindow *w, int key, int sc, int action, int mods)
@@ -1428,41 +1522,53 @@ void key_callback(GLFWwindow *w, int key, int sc, int action, int mods)
     }
     if (key == GLFW_KEY_E)
     {
-        // Call elevator to nearest floor if player is nearby
+        // Call elevator / open door when near lift (X:-39..-29, Z:20..30)
         float x = basic_camera.eye.x, z = basic_camera.eye.z, y = basic_camera.eye.y;
-        if (x >= -5 && x <= 5 && z >= -16 && z <= -10) {
-            int targetFl = 0;
-            if (y > FLOOR_Y[2]) targetFl = 2;
-            else if (y > FLOOR_Y[1]) targetFl = 1;
-            
-            if (elevatorState == ELEV_IDLE || elevatorState == ELEV_DOOR_OPEN) {
-                elevatorTargetFloor = targetFl;
-                if (elevatorCurrentFloor == targetFl) {
+        bool nearLift = (x >= -39 && x <= -29 && z >= 20 && z <= 30);
+        if (nearLift) {
+            // Determine which floor player is on
+            int playerFloor = 0;
+            if (y > FLOOR_Y[2] - 1) playerFloor = 2;
+            else if (y > FLOOR_Y[1] - 1) playerFloor = 1;
+
+            if (elevatorState == ELEV_IDLE) {
+                if (elevatorCurrentFloor == playerFloor) {
+                    // Lift is here, just open the door
                     elevatorState = ELEV_DOOR_OPENING;
-                    cout << "Elevator: Opening doors on Floor " << targetFl << endl;
+                    elevatorDoorOffset = 0.0f;
+                    elevatorTimer = 0.0f;
+                    cout << "Elevator: Opening doors on Floor " << playerFloor << endl;
                 } else {
-                    elevatorState = ELEV_DOOR_CLOSING;
-                    cout << "Elevator: Called to Floor " << targetFl << endl;
+                    // Call lift to this floor
+                    elevatorTargetFloor = playerFloor;
+                    elevatorState = ELEV_MOVING;
+                    cout << "Elevator: Called to Floor " << playerFloor << endl;
                 }
+            } else if (elevatorState == ELEV_DOOR_OPEN || elevatorState == ELEV_DOOR_CLOSING) {
+                // Re-open if closing
+                elevatorState = ELEV_DOOR_OPENING;
+                elevatorTimer = 0.0f;
+                cout << "Elevator: Re-opening doors" << endl;
             }
         }
     }
-    // L+Key for elevator floor destination
-    if (lKeyHeld) {
-        if (key == GLFW_KEY_G) {
-            elevatorTargetFloor = 0;
-            elevatorState = ELEV_DOOR_CLOSING;
-            cout << "Elevator going to Ground Floor" << endl;
-        } else if (key == GLFW_KEY_1) {
-            elevatorTargetFloor = 1;
-            elevatorState = ELEV_DOOR_CLOSING;
-            cout << "Elevator going to 1st Floor" << endl;
-        } else if (key == GLFW_KEY_2) {
-            elevatorTargetFloor = 2;
-            elevatorState = ELEV_DOOR_CLOSING;
-            cout << "Elevator going to 2nd Floor" << endl;
+    // Shift+0/1/2 for elevator floor selection (when inside lift)
+    if (mods & GLFW_MOD_SHIFT) {
+        int targetFloor = -1;
+        if (key == GLFW_KEY_0) { targetFloor = 0; } // Shift+0 = Ground
+        else if (key == GLFW_KEY_1) { targetFloor = 1; } // Shift+1 = 1st
+        else if (key == GLFW_KEY_2) { targetFloor = 2; } // Shift+2 = 2nd
+
+        if (targetFloor >= 0 && playerInsideLift) {
+            elevatorTargetFloor = targetFloor;
+            if (elevatorState == ELEV_DOOR_OPEN || elevatorState == ELEV_IDLE) {
+                elevatorState = ELEV_DOOR_CLOSING;
+                elevatorTimer = 0.0f;
+            }
+            const char* floorNames[] = {"Ground", "1st", "2nd"};
+            cout << "Elevator going to " << floorNames[targetFloor] << " Floor" << endl;
+            return; // Prevent other Shift+key actions
         }
-        return; // Prevent triggering G entrance door
     }
     if (key == GLFW_KEY_R)
     {
@@ -1482,7 +1588,7 @@ void key_callback(GLFWwindow *w, int key, int sc, int action, int mods)
         if (cursorCaptured) firstMouse = true; // avoid jump when re-capturing
         cout << "Cursor: " << (cursorCaptured ? "CAPTURED" : "FREE") << endl;
     }
-    if (key == GLFW_KEY_G && !lKeyHeld)
+    if (key == GLFW_KEY_G)
     {
         entranceDoorOpen = !entranceDoorOpen;
         cout << "Entrance Door: " << (entranceDoorOpen ? "OPENING" : "CLOSING") << endl;
