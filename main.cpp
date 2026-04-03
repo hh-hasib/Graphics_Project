@@ -1591,22 +1591,22 @@ void key_callback(GLFWwindow *w, int key, int sc, int action, int mods)
         activeViewport = (activeViewport == 3) ? 0 : 3;
     if (key == GLFW_KEY_F4)
         activeViewport = (activeViewport == 4) ? 0 : 4;
-    if (key == GLFW_KEY_1)
+    if (key == GLFW_KEY_1 && !(mods & GLFW_MOD_SHIFT))
     {
         ambientEnabled = !ambientEnabled;
         cout << "Ambient: " << (ambientEnabled ? "ON" : "OFF") << endl;
     }
-    if (key == GLFW_KEY_2)
+    if (key == GLFW_KEY_2 && !(mods & GLFW_MOD_SHIFT))
     {
         pointLightsEnabled = !pointLightsEnabled;
         cout << "Point Lights: " << (pointLightsEnabled ? "ON" : "OFF") << endl;
     }
-    if (key == GLFW_KEY_3)
+    if (key == GLFW_KEY_3 && !(mods & GLFW_MOD_SHIFT))
     {
         dirLightEnabled = !dirLightEnabled;
         cout << "Dir Light: " << (dirLightEnabled ? "ON" : "OFF") << endl;
     }
-    if (key == GLFW_KEY_5)
+    if (key == GLFW_KEY_5 && !(mods & GLFW_MOD_SHIFT))
     {
         spotLightsEnabled = !spotLightsEnabled;
         cout << "Spot Lights: " << (spotLightsEnabled ? "ON" : "OFF") << endl;
