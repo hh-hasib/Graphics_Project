@@ -1022,12 +1022,8 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             // Elev shaft col X:-37..-31 (hole Z:22..28)
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 16}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 34}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
-            // X:-31..-22
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-26.5f, fy, 25}, {9, SLAB, 30}, texFloor, 8, 32, .9f);
-            // L-stair col X:-22..-14 (hole Z:10..24)
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-18, fy, 32}, {8, SLAB, 16}, texFloor, 8, 32, .9f);
-            // X:-14..-5
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-9.5f, fy, 25}, {9, SLAB, 30}, texFloor, 8, 32, .9f);
+            // X:-31..-5 (combined strip: L-stair removed)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-18, fy, 25}, {26, SLAB, 30}, texFloor, 8, 32, .9f);
             // Escalator col X:-5..5 (hole Z:10..32)
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, 36}, {10, SLAB, 8}, texFloor, 8, 32, .9f);
             // X:5..14
@@ -1046,10 +1042,8 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-38.5f, fy, 25}, {3, SLAB, 30}, texFloor, 8, 32, .9f);
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 16}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 34}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-26.5f, fy, 25}, {9, SLAB, 30}, texFloor, 8, 32, .9f);
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-18, fy, 32}, {8, SLAB, 16}, texFloor, 8, 32, .9f);
-            // Center X:-14..14 (no escalator hole on floor 2)
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, 25}, {28, SLAB, 30}, texFloor, 8, 32, .9f);
+            // X:-31..14 (combined floor 2: L-stair removed)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-8.5f, fy, 25}, {45, SLAB, 30}, texFloor, 8, 32, .9f);
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {18, fy, 32}, {8, SLAB, 16}, texFloor, 8, 32, .9f);
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {31, fy, 25}, {18, SLAB, 30}, texFloor, 8, 32, .9f);
         }
@@ -1092,9 +1086,8 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCube(V, ls, I, C_CEILING, {-38.5f, cy, 25}, {3, .1f, 30});
             drawCube(V, ls, I, C_CEILING, {-34, cy, 16}, {6, .1f, 12});
             drawCube(V, ls, I, C_CEILING, {-34, cy, 34}, {6, .1f, 12});
-            drawCube(V, ls, I, C_CEILING, {-26.5f, cy, 25}, {9, .1f, 30});
-            drawCube(V, ls, I, C_CEILING, {-18, cy, 32}, {8, .1f, 16});
-            drawCube(V, ls, I, C_CEILING, {-9.5f, cy, 25}, {9, .1f, 30});
+            // X:-31..-5 (combined ceiling: L-stair removed)
+            drawCube(V, ls, I, C_CEILING, {-18, cy, 25}, {26, .1f, 30});
             drawCube(V, ls, I, C_CEILING, {0, cy, 36}, {10, .1f, 8});
             drawCube(V, ls, I, C_CEILING, {9.5f, cy, 25}, {9, .1f, 30});
             drawCube(V, ls, I, C_CEILING, {18, cy, 32}, {8, .1f, 16});
@@ -1107,9 +1100,8 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCube(V, ls, I, C_CEILING, {-38.5f, cy, 25}, {3, .1f, 30});
             drawCube(V, ls, I, C_CEILING, {-34, cy, 16}, {6, .1f, 12});
             drawCube(V, ls, I, C_CEILING, {-34, cy, 34}, {6, .1f, 12});
-            drawCube(V, ls, I, C_CEILING, {-26.5f, cy, 25}, {9, .1f, 30});
-            drawCube(V, ls, I, C_CEILING, {-18, cy, 32}, {8, .1f, 16});
-            drawCube(V, ls, I, C_CEILING, {0, cy, 25}, {28, .1f, 30});
+            // X:-31..14 (combined 1st floor ceiling: L-stair removed)
+            drawCube(V, ls, I, C_CEILING, {-8.5f, cy, 25}, {45, .1f, 30});
             drawCube(V, ls, I, C_CEILING, {18, cy, 32}, {8, .1f, 16});
             drawCube(V, ls, I, C_CEILING, {31, cy, 25}, {18, .1f, 30});
         }
@@ -1267,9 +1259,9 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         float stW = 3.5f;
         float stDepth = 14.0f; // Z range: 10 to 24
 
-        // Draw both staircases (mirror)
+        // Draw only right staircase
         float stairCentersX[] = {-18.0f, 18.0f};
-        for (int side = 0; side < 2; side++)
+        for (int side = 1; side < 2; side++)
         {
             float baseX = stairCentersX[side];
             float xOff1 = (side == 0) ? -2.0f : 2.0f; // first flight offset
@@ -1533,25 +1525,6 @@ void processInput(GLFWwindow *w)
         }
         else
         {
-            // Left staircase G->1 (X:-20, Z:23 to 14, south-to-north)
-            bool onLStairG1 = (x >= -22 && x <= -14 && z >= 14 && z <= 23);
-            if (onLStairG1)
-            {
-                float t = (23.f - z) / 9.f;
-                t = glm::clamp(t, 0.f, 1.f);
-                targetY = FLOOR_Y[0] + t * (FLOOR_Y[1] - FLOOR_Y[0]) + 1.7f;
-            }
-            // Left staircase 1->2 (X:-16, Z:14 to 23, north-to-south)
-            bool onLStair12 = (x >= -22 && x <= -14 && z >= 14 && z <= 23 && basic_camera.eye.y > FLOOR_Y[1] - 1);
-            if (onLStair12 && basic_camera.eye.y > FLOOR_Y[1])
-            {
-                float t = (z - 14.f) / 9.f;
-                t = glm::clamp(t, 0.f, 1.f);
-                targetY = FLOOR_Y[1] + t * (FLOOR_Y[2] - FLOOR_Y[1]) + 1.7f;
-            }
-            if (x >= -22 && x <= -14 && z >= 12 && z < 14)
-                targetY = FLOOR_Y[1] + 1.7f;
-
             // Right staircase G->1 (X:20, Z:23 to 14)
             bool onRStairG1 = (x >= 14 && x <= 22 && z >= 14 && z <= 23);
             if (onRStairG1)
