@@ -1026,12 +1026,13 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-18, fy, 25}, {26, SLAB, 30}, texFloor, 8, 32, .9f);
             // Escalator col X:-5..5 (hole Z:10..32)
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, 36}, {10, SLAB, 8}, texFloor, 8, 32, .9f);
-            // X:5..14
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {9.5f, fy, 25}, {9, SLAB, 30}, texFloor, 8, 32, .9f);
-            // R-stair col X:14..22 (hole Z:10..24)
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {18, fy, 32}, {8, SLAB, 16}, texFloor, 8, 32, .9f);
-            // X:22..40
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {31, fy, 25}, {18, SLAB, 30}, texFloor, 8, 32, .9f);
+            // X:5..24 (Solid corridor)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {14.5f, fy, 25}, {19, SLAB, 30}, texFloor, 8, 32, .9f);
+            // New right staircase G->1 hole X:24..36, Z:22..26
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {30.0f, fy, 16}, {12, SLAB, 12}, texFloor, 8, 32, .9f); // Z:10..22
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {30.0f, fy, 33}, {12, SLAB, 14}, texFloor, 8, 32, .9f); // Z:26..40
+            // East edge X:36..40
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {38.0f, fy, 25}, {4.0f, SLAB, 30}, texFloor, 8, 32, .9f);
         }
         else
         {
@@ -1042,10 +1043,13 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-38.5f, fy, 25}, {3, SLAB, 30}, texFloor, 8, 32, .9f);
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 16}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-34, fy, 34}, {6, SLAB, 12}, texFloor, 8, 32, .9f);
-            // X:-31..14 (combined floor 2: L-stair removed)
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-8.5f, fy, 25}, {45, SLAB, 30}, texFloor, 8, 32, .9f);
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {18, fy, 32}, {8, SLAB, 16}, texFloor, 8, 32, .9f);
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {31, fy, 25}, {18, SLAB, 30}, texFloor, 8, 32, .9f);
+            // X:-31..24 (combined floor 2: L-stair removed)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-3.5f, fy, 25}, {55, SLAB, 30}, texFloor, 8, 32, .9f);
+            // New right staircase 1->2 hole X:24..36, Z:26..30
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {30.0f, fy, 18}, {12, SLAB, 16}, texFloor, 8, 32, .9f); // Z:10..26
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {30.0f, fy, 35}, {12, SLAB, 10}, texFloor, 8, 32, .9f); // Z:30..40
+            // East edge X:36..40
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {38.0f, fy, 25}, {4.0f, SLAB, 30}, texFloor, 8, 32, .9f);
         }
         ls.setBool("blendWithColor", false);
 
@@ -1070,7 +1074,11 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         float cy = CEIL_Y[fl];
         if (fl == 2)
         {
-            drawCube(V, ls, I, C_CEILING, {0, cy, 0}, {79.5f, .15f, 79.5f}); // roof
+            // Roof with only the stair hole for 2->Roof (X:24..36, Z:22..26)
+            drawCube(V, ls, I, C_CEILING, {-8.0f, cy, 0}, {64.0f, .15f, 80.0f}); // West: X:-40..24
+            drawCube(V, ls, I, C_CEILING, {30.0f, cy, -9.0f}, {12.0f, .15f, 62.0f}); // North: Z:-40..22 (X:24..36)
+            drawCube(V, ls, I, C_CEILING, {30.0f, cy, 33.0f}, {12.0f, .15f, 14.0f}); // South: Z:26..40 (X:24..36)
+            drawCube(V, ls, I, C_CEILING, {38.0f, cy, 0}, {4.0f, .15f, 80.0f}); // East: X:36..40
         }
         else if (fl == 0)
         {
@@ -1089,9 +1097,10 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             // X:-31..-5 (combined ceiling: L-stair removed)
             drawCube(V, ls, I, C_CEILING, {-18, cy, 25}, {26, .1f, 30});
             drawCube(V, ls, I, C_CEILING, {0, cy, 36}, {10, .1f, 8});
-            drawCube(V, ls, I, C_CEILING, {9.5f, cy, 25}, {9, .1f, 30});
-            drawCube(V, ls, I, C_CEILING, {18, cy, 32}, {8, .1f, 16});
-            drawCube(V, ls, I, C_CEILING, {31, cy, 25}, {18, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {14.5f, cy, 25}, {19, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {30.0f, cy, 16}, {12, .1f, 12});
+            drawCube(V, ls, I, C_CEILING, {30.0f, cy, 33}, {12, .1f, 14});
+            drawCube(V, ls, I, C_CEILING, {38.0f, cy, 25}, {4.0f, .1f, 30});
         }
         else
         {
@@ -1100,10 +1109,11 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCube(V, ls, I, C_CEILING, {-38.5f, cy, 25}, {3, .1f, 30});
             drawCube(V, ls, I, C_CEILING, {-34, cy, 16}, {6, .1f, 12});
             drawCube(V, ls, I, C_CEILING, {-34, cy, 34}, {6, .1f, 12});
-            // X:-31..14 (combined 1st floor ceiling: L-stair removed)
-            drawCube(V, ls, I, C_CEILING, {-8.5f, cy, 25}, {45, .1f, 30});
-            drawCube(V, ls, I, C_CEILING, {18, cy, 32}, {8, .1f, 16});
-            drawCube(V, ls, I, C_CEILING, {31, cy, 25}, {18, .1f, 30});
+            // X:-31..24 (combined 1st floor ceiling: L-stair removed)
+            drawCube(V, ls, I, C_CEILING, {-3.5f, cy, 25}, {55, .1f, 30});
+            drawCube(V, ls, I, C_CEILING, {30.0f, cy, 18}, {12, .1f, 16});
+            drawCube(V, ls, I, C_CEILING, {30.0f, cy, 35}, {12, .1f, 10});
+            drawCube(V, ls, I, C_CEILING, {38.0f, cy, 25}, {4.0f, .1f, 30});
         }
     }
 
@@ -1256,50 +1266,109 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
     // ============================================================
     {
         int ns = 14;
-        float stW = 3.5f;
-        float stDepth = 14.0f; // Z range: 10 to 24
-
-        // Draw only right staircase
-        float stairCentersX[] = {-18.0f, 18.0f};
-        for (int side = 1; side < 2; side++)
+        float stW = 4.0f; // Width of stairs in Z
+        float stepRun = 10.0f / ns; // X length = 10 (24 to 34)
+        
+        // Flight G→1: Starts at X=24, ends at X=34. Moves +X (East). Z = 24.
+        for (int i = 0; i < ns; i++)
         {
-            float baseX = stairCentersX[side];
-            float xOff1 = (side == 0) ? -2.0f : 2.0f; // first flight offset
-            float xOff2 = (side == 0) ? 2.0f : -2.0f; // second flight offset
-
-            // Flight G→1: Z goes from 23(bottom) to 14(top)
-            for (int i = 0; i < ns; i++)
-            {
-                float sz = 23.f - i * (9.f / ns);
-                float sy = i * (FLOOR_Y[1] / ns);
-                drawCube(V, ls, I, C_STAIR, {baseX + xOff1, sy + .25f, sz}, {stW, .5f, 9.f / ns * .95f});
-            }
-            // Landing at top G→1
-            drawCube(V, ls, I, C_STAIR, {baseX, FLOOR_Y[1] - .15f, 13}, {stW * 2 + 1, SLAB, 2});
-
-            // Flight 1→2: Z goes from 14(bottom) to 23(top), offset in X
-            for (int i = 0; i < ns; i++)
-            {
-                float sz = 14.f + i * (9.f / ns);
-                float sy = FLOOR_Y[1] + i * ((FLOOR_Y[2] - FLOOR_Y[1]) / ns);
-                drawCube(V, ls, I, C_STAIR, {baseX + xOff2, sy + .25f, sz}, {stW, .5f, 9.f / ns * .95f});
-            }
-            // Landing at top 1→2
-            drawCube(V, ls, I, C_STAIR, {baseX, FLOOR_Y[2] - .15f, 24}, {stW * 2 + 1, SLAB, 2});
-
-            // Open staircases (no enclosure walls, just railings)
-
-            // Railings
-            drawCube(V, ls, I, C_LAMP, {baseX + xOff1 - stW / 2, FLOOR_Y[1] / 2 + 1, 18.5f}, {.08f, FLOOR_Y[1] + 2, .08f});
-            drawCube(V, ls, I, C_LAMP, {baseX + xOff1 + stW / 2, FLOOR_Y[1] / 2 + 1, 18.5f}, {.08f, FLOOR_Y[1] + 2, .08f});
-            drawCube(V, ls, I, C_LAMP, {baseX + xOff2 - stW / 2, FLOOR_Y[1] + 3, 18.5f}, {.08f, FLOOR_H + 2, .08f});
-            drawCube(V, ls, I, C_LAMP, {baseX + xOff2 + stW / 2, FLOOR_Y[1] + 3, 18.5f}, {.08f, FLOOR_H + 2, .08f});
-            // Handrail bars
-            drawCube(V, ls, I, C_LAMP, {baseX + xOff1 - stW / 2, FLOOR_Y[1] + .5f, 18.5f}, {.04f, .04f, 10});
-            drawCube(V, ls, I, C_LAMP, {baseX + xOff1 + stW / 2, FLOOR_Y[1] + .5f, 18.5f}, {.04f, .04f, 10});
-            drawCube(V, ls, I, C_LAMP, {baseX + xOff2 - stW / 2, FLOOR_Y[2] + .5f, 18.5f}, {.04f, .04f, 10});
-            drawCube(V, ls, I, C_LAMP, {baseX + xOff2 + stW / 2, FLOOR_Y[2] + .5f, 18.5f}, {.04f, .04f, 10});
+            float sx = 24.0f + i * stepRun;
+            float sy = i * (FLOOR_Y[1] / ns);
+            drawCube(V, ls, I, C_STAIR, {sx + stepRun / 2, sy + .25f, 24.0f}, {stepRun * .95f, .5f, stW});
         }
+        // Landing at top of G→1 (X=35, Z=24) connecting to Flight 1->2
+        drawCube(V, ls, I, C_STAIR, {35.0f, FLOOR_Y[1] - .15f, 26.0f}, {2.0f, SLAB, stW * 2});
+
+        // Flight 1→2: Starts at X=34, ends at X=24. Moves -X (West). Z = 28.
+        for (int i = 0; i < ns; i++)
+        {
+            float sx = 34.0f - i * stepRun;
+            float sy = FLOOR_Y[1] + i * ((FLOOR_Y[2] - FLOOR_Y[1]) / ns);
+            drawCube(V, ls, I, C_STAIR, {sx - stepRun / 2, sy + .25f, 28.0f}, {stepRun * .95f, .5f, stW});
+        }
+        // Landing at top of 1→2 (X=23, Z=28) - integrates to corridor
+        drawCube(V, ls, I, C_STAIR, {23.0f, FLOOR_Y[2] - .15f, 28.0f}, {2.0f, SLAB, stW});
+
+        // Open staircases (Railings)
+        
+        // Vertical Posts
+        drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[1] / 2 + 1, 22.0f}, {.08f, FLOOR_Y[1] + 2, .08f}); // start post G->1
+        drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[1] / 2 + 1, 22.0f}, {.08f, FLOOR_Y[1] + 2, .08f}); // end post G->1
+        drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[1] / 2 + 1, 26.0f}, {.08f, FLOOR_Y[1] + 2, .08f});
+        drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[1] / 2 + 1, 26.0f}, {.08f, FLOOR_Y[1] + 2, .08f});
+
+        drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[1] + FLOOR_H / 2 + 1, 26.0f}, {.08f, FLOOR_H + 2, .08f}); // end post 1->2
+        drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[1] + FLOOR_H / 2 + 1, 26.0f}, {.08f, FLOOR_H + 2, .08f}); // start post 1->2
+        drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[1] + FLOOR_H / 2 + 1, 30.0f}, {.08f, FLOOR_H + 2, .08f});
+        drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[1] + FLOOR_H / 2 + 1, 30.0f}, {.08f, FLOOR_H + 2, .08f});
+
+        // Handrail bars (angled)
+        glm::mat4 m1 = glm::translate(I, {29.0f, FLOOR_Y[1] / 2 + 1.2f, 22.05f});
+        m1 = glm::rotate(m1, atan2(FLOOR_Y[1], 10.0f), {0, 0, 1});
+        drawCube(V, ls, m1, C_LAMP, {0, 0, 0}, {12.5f, .06f, .06f}); // left rail G->1
+        glm::mat4 m2 = glm::translate(I, {29.0f, FLOOR_Y[1] / 2 + 1.2f, 25.95f});
+        m2 = glm::rotate(m2, atan2(FLOOR_Y[1], 10.0f), {0, 0, 1});
+        drawCube(V, ls, m2, C_LAMP, {0, 0, 0}, {12.5f, .06f, .06f}); // right rail G->1
+
+        glm::mat4 m3 = glm::translate(I, {29.0f, FLOOR_Y[1] + FLOOR_H / 2 + 1.2f, 26.05f});
+        m3 = glm::rotate(m3, atan2(-FLOOR_Y[1], 10.0f), {0, 0, 1}); 
+        drawCube(V, ls, m3, C_LAMP, {0, 0, 0}, {12.5f, .06f, .06f}); // left rail 1->2
+        glm::mat4 m4 = glm::translate(I, {29.0f, FLOOR_Y[1] + FLOOR_H / 2 + 1.2f, 29.95f});
+        m4 = glm::rotate(m4, atan2(-FLOOR_Y[1], 10.0f), {0, 0, 1}); 
+        drawCube(V, ls, m4, C_LAMP, {0, 0, 0}, {12.5f, .06f, .06f}); // right rail 1->2
+
+        // Flight 2→Roof: Starts at X=24, ends at X=34. Moves +X (East). Z = 24.
+        for (int i = 0; i < ns; i++)
+        {
+            float sx = 24.0f + i * stepRun;
+            float sy = FLOOR_Y[2] + i * ((CEIL_Y[2] - FLOOR_Y[2]) / ns);
+            drawCube(V, ls, I, C_STAIR, {sx + stepRun / 2, sy + .25f, 24.0f}, {stepRun * .95f, .5f, stW});
+        }
+        // Landing at top of 2→Roof (X=35, Z=24) connecting to Roof
+        drawCube(V, ls, I, C_STAIR, {35.0f, CEIL_Y[2] - .15f, 26.0f}, {2.0f, SLAB, stW * 2});
+
+        // Vertical Posts for 2->Roof
+        drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 22.0f}, {.08f, FLOOR_H + 2, .08f}); 
+        drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 22.0f}, {.08f, FLOOR_H + 2, .08f}); 
+        drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 26.0f}, {.08f, FLOOR_H + 2, .08f});
+        drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 26.0f}, {.08f, FLOOR_H + 2, .08f});
+
+        // Handrail bars for 2->Roof (angled)
+        glm::mat4 m5 = glm::translate(I, {29.0f, FLOOR_Y[2] + FLOOR_H / 2 + 1.2f, 22.05f});
+        m5 = glm::rotate(m5, atan2(CEIL_Y[2] - FLOOR_Y[2], 10.0f), {0, 0, 1});
+        drawCube(V, ls, m5, C_LAMP, {0, 0, 0}, {12.5f, .06f, .06f}); // left rail 2->Roof
+        glm::mat4 m6 = glm::translate(I, {29.0f, FLOOR_Y[2] + FLOOR_H / 2 + 1.2f, 25.95f});
+        m6 = glm::rotate(m6, atan2(CEIL_Y[2] - FLOOR_Y[2], 10.0f), {0, 0, 1});
+        drawCube(V, ls, m6, C_LAMP, {0, 0, 0}, {12.5f, .06f, .06f}); // right rail 2->Roof
+    }
+
+    // ============================================================
+    // ROOFTOP STAIRCASE SHED (Headhouse)
+    // ============================================================
+    {
+        float bY = CEIL_Y[2]; // Base Y
+        float sH = 3.5f; // Shed Height
+        float wT = 0.2f; // Wall thickness
+        
+        // West Wall (solid behind stairs)
+        drawCube(V, ls, I, C_EXT, {23.9f, bY + sH/2, 24.0f}, {wT, sH, 4.4f});
+        
+        // North Wall (solid with glass insert)
+        drawCube(V, ls, I, C_EXT, {30.0f, bY + sH/2, 21.9f}, {12.0f, sH, wT});
+        // South Wall (solid with glass insert)
+        drawCube(V, ls, I, C_EXT, {30.0f, bY + sH/2, 26.1f}, {12.0f, sH, wT});
+
+        // East Face (Open doorway frames)
+        drawCube(V, ls, I, C_EXT, {36.1f, bY + sH/2, 21.9f}, {wT, sH, wT}); // NE Pillar
+        drawCube(V, ls, I, C_EXT, {36.1f, bY + sH/2, 26.1f}, {wT, sH, wT}); // SE Pillar
+        drawCube(V, ls, I, C_EXT, {36.1f, bY + sH - 0.4f, 24.0f}, {wT, 0.8f, 4.4f}); // Top Header
+
+        // Roof Slab (Slight overhang)
+        drawCube(V, ls, I, C_EXT * 0.8f, {30.0f, bY + sH + 0.1f, 24.0f}, {12.8f, 0.2f, 4.8f});
+
+        // Glass panel inserts for North/South walls
+        drawCube(V, ls, I, C_GLASS, {30.0f, bY + sH/2, 21.9f}, {8.0f, 2.0f, wT + 0.05f}, 128, 0.4f);
+        drawCube(V, ls, I, C_GLASS, {30.0f, bY + sH/2, 26.1f}, {8.0f, 2.0f, wT + 0.05f}, 128, 0.4f);
     }
 
     // ============================================================
@@ -1512,7 +1581,9 @@ void processInput(GLFWwindow *w)
         // Normal height constraints
         float targetY = 1.7f;
         // Check which floor we are on
-        if (basic_camera.eye.y > FLOOR_Y[2])
+        if (basic_camera.eye.y > CEIL_Y[2])
+            targetY = CEIL_Y[2] + 1.7f;
+        else if (basic_camera.eye.y > FLOOR_Y[2])
             targetY = FLOOR_Y[2] + 1.7f;
         else if (basic_camera.eye.y > FLOOR_Y[1])
             targetY = FLOOR_Y[1] + 1.7f;
@@ -1525,23 +1596,41 @@ void processInput(GLFWwindow *w)
         }
         else
         {
-            // Right staircase G->1 (X:20, Z:23 to 14)
-            bool onRStairG1 = (x >= 14 && x <= 22 && z >= 14 && z <= 23);
+            // Right staircase G->1 (X:24..34, Z:22..26, UP is +X)
+            bool onRStairG1 = (x >= 24 && x <= 34 && z >= 22 && z <= 26);
             if (onRStairG1)
             {
-                float t = (23.f - z) / 9.f;
+                float t = (x - 24.f) / 10.f;
                 t = glm::clamp(t, 0.f, 1.f);
                 targetY = FLOOR_Y[0] + t * (FLOOR_Y[1] - FLOOR_Y[0]) + 1.7f;
             }
-            bool onRStair12 = (x >= 14 && x <= 22 && z >= 14 && z <= 23 && basic_camera.eye.y > FLOOR_Y[1] - 1);
-            if (onRStair12 && basic_camera.eye.y > FLOOR_Y[1])
+            // Landing at top of G->1
+            if (x >= 34 && x <= 38 && z >= 22 && z <= 30 && basic_camera.eye.y < FLOOR_Y[2] - 1)
+                targetY = FLOOR_Y[1] + 1.7f;
+
+            // Right staircase 1->2 (X:24..34, Z:26..30, UP is -X)
+            bool onRStair12 = (x >= 24 && x <= 34 && z >= 26 && z <= 30 && basic_camera.eye.y > FLOOR_Y[1] - 1);
+            if (onRStair12)
             {
-                float t = (z - 14.f) / 9.f;
+                float t = (34.f - x) / 10.f;
                 t = glm::clamp(t, 0.f, 1.f);
                 targetY = FLOOR_Y[1] + t * (FLOOR_Y[2] - FLOOR_Y[1]) + 1.7f;
             }
-            if (x >= 14 && x <= 22 && z >= 12 && z < 14)
-                targetY = FLOOR_Y[1] + 1.7f;
+            // Landing at top of 1->2 (corridor integration)
+            if (x >= 22 && x <= 26 && z >= 26 && z <= 30 && basic_camera.eye.y > FLOOR_Y[2] - 1 && basic_camera.eye.y < CEIL_Y[2] - 1)
+                targetY = FLOOR_Y[2] + 1.7f;
+
+            // Right staircase 2->Roof (X:24..34, Z:22..26, UP is +X)
+            bool onRStair2R = (x >= 24 && x <= 34 && z >= 22 && z <= 26 && basic_camera.eye.y > FLOOR_Y[2] - 1);
+            if (onRStair2R)
+            {
+                float t = (x - 24.f) / 10.f;
+                t = glm::clamp(t, 0.f, 1.f);
+                targetY = FLOOR_Y[2] + t * (CEIL_Y[2] - FLOOR_Y[2]) + 1.7f;
+            }
+            // Landing at top of 2->Roof
+            if (x >= 34 && x <= 38 && z >= 22 && z <= 30 && basic_camera.eye.y > CEIL_Y[2] - 1)
+                targetY = CEIL_Y[2] + 1.7f;
         }
         // Smooth height transition
         basic_camera.eye.y = glm::mix(basic_camera.eye.y, targetY, deltaTime * 10.0f);
