@@ -1134,44 +1134,47 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         {
             float esX = (esc == 0) ? -(esW / 2 + esGap / 2) : (esW / 2 + esGap / 2);
 
-            // Side panels (glass)
-            float panelY = esRise / 2;
-            drawCube(V, ls, I, C_GLASS, {esX - esW / 2, panelY, esCenterZ}, {.08f, esRise + 1, esLen + 1}, 128, .25f);
-            drawCube(V, ls, I, C_GLASS, {esX + esW / 2, panelY, esCenterZ}, {.08f, esRise + 1, esLen + 1}, 128, .25f);
+            // Side panels (glass) - angled for realism
+            float pitch = atan2(esRise, esLen);
+            float hypot = sqrt(esRise * esRise + esLen * esLen);
+            glm::mat4 panelM = glm::translate(I, {0, esRise / 2.0f, esCenterZ});
+            
+            glm::mat4 leftPanelM = glm::translate(panelM, {esX - esW / 2, 0.5f, 0});
+            leftPanelM = glm::rotate(leftPanelM, pitch, {1, 0, 0});
+            drawCube(V, ls, leftPanelM, C_GLASS, {0, 0, 0}, {.08f, 1.2f, hypot + 2.0f}, 128, .2f);
+            
+            glm::mat4 rightPanelM = glm::translate(panelM, {esX + esW / 2, 0.5f, 0});
+            rightPanelM = glm::rotate(rightPanelM, pitch, {1, 0, 0});
+            drawCube(V, ls, rightPanelM, C_GLASS, {0, 0, 0}, {.08f, 1.2f, hypot + 2.0f}, 128, .2f);
 
             // Handrails
-            drawCube(V, ls, I, C_TIRE, {esX - esW / 2, esRise + .5f, esCenterZ}, {.1f, .06f, esLen});
-            drawCube(V, ls, I, C_TIRE, {esX + esW / 2, esRise + .5f, esCenterZ}, {.1f, .06f, esLen});
+            glm::mat4 leftRailM = glm::translate(leftPanelM, {0, 0.6f, 0});
+            drawCube(V, ls, leftRailM, C_TIRE, {0, 0, 0}, {.12f, .06f, hypot + 2.0f});
+            
+            glm::mat4 rightRailM = glm::translate(rightPanelM, {0, 0.6f, 0});
+            drawCube(V, ls, rightRailM, C_TIRE, {0, 0, 0}, {.12f, .06f, hypot + 2.0f});
 
-            // Truss structure
-            for (int ti = 0; ti < 6; ti++)
-            {
-                float tt = (float)ti / 5;
-                float tZ = esBottomZ - tt * esLen;
-                float tY = tt * esRise;
-                drawCube(V, ls, I, C_LAMP * .7f, {esX, tY * .5f, tZ}, {esW - .3f, tY + .1f, .08f});
-            }
+            // Truss structure (slanted metal base)
+            glm::mat4 baseM = glm::translate(panelM, {esX, -0.2f, 0});
+            baseM = glm::rotate(baseM, pitch, {1, 0, 0});
+            drawCube(V, ls, baseM, C_LAMP * .7f, {0, 0, 0}, {esW - .2f, 0.4f, hypot});
 
             // Animated steps
-            float dir = (esc == 0) ? 1.0f : -1.0f;
-            float animOffset = fmod((float)glfwGetTime() * 0.3f, 1.0f) * stepH * dir;
+            // Right (esc=1) goes UP, Left (esc=0) goes DOWN
+            float dir = (esc == 1) ? 1.0f : -1.0f;
             for (int i = 0; i < numSteps; i++)
             {
-                float t = (float)i / numSteps;
-                float sZ, sY;
-                if (esc == 0)
-                {
-                    sZ = esBottomZ - t * esLen + animOffset * (esLen / esRise);
-                    sY = t * esRise + animOffset;
-                }
-                else
-                {
-                    sZ = esTopZ + t * esLen - animOffset * (esLen / esRise);
-                    sY = esRise - t * esRise - animOffset;
-                }
-                sY = glm::clamp(sY, 0.0f, esRise);
-                sZ = glm::clamp(sZ, esTopZ, esBottomZ);
-                drawCube(V, ls, I, C_STAIR * 1.05f, {esX, sY + .05f, sZ}, {esW - .4f, .1f, stepZ * .85f});
+                float rawT = (float)i / numSteps;
+                float currentT = fmod(rawT + (dir * escalatorOffset * 0.1f), 1.0f);
+                if (currentT < 0) currentT += 1.0f;
+
+                float sZ = esBottomZ - currentT * esLen;
+                float sY = currentT * esRise;
+                
+                // Flat part of the step
+                drawCube(V, ls, I, C_STAIR * 1.05f, {esX, sY + .05f, sZ}, {esW - .4f, .1f, stepZ * 1.0f});
+                // Vertical part of the step (riser)
+                drawCube(V, ls, I, C_STAIR * 0.9f, {esX, sY - stepH / 2 + .1f, sZ + stepZ / 2}, {esW - .4f, stepH, .1f});
             }
 
             // Entry/exit platforms
@@ -1572,7 +1575,18 @@ void processInput(GLFWwindow *w)
     }
     else
     {
-        // On escalator: height depends ONLY on Z position (same for both UP and DOWN)
+        // On escalator: automatically move Z
+        // 18 units in 5 seconds = 3.6 units/sec * escalatorDir
+        float esSpeed = 3.6f * deltaTime * escalatorDir; 
+        if (x > 0.f) {
+            // Right escalator: UP (Z goes towards 12)
+            basic_camera.eye.z -= esSpeed;
+        } else {
+            // Left escalator: DOWN (Z goes towards 30)
+            basic_camera.eye.z += esSpeed;
+        }
+        z = basic_camera.eye.z;
+        
         // Z=30 (near entrance) = ground level, Z=12 (far end) = 1st floor level
         float t = (30.f - z) / 18.0f;
         t = glm::clamp(t, 0.f, 1.f);
