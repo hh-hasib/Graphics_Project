@@ -715,6 +715,7 @@ void drawCube(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 c, glm::vec3 p
     s.setVec3("material.diffuse", c);
     s.setVec3("material.specular", glm::vec3(0.3f));
     s.setFloat("material.shininess", sh);
+    s.setFloat("alpha", a);
     s.setBool("useTexture", false);
     s.setMat4("model", m);
     glBindVertexArray(v);
@@ -757,6 +758,7 @@ void drawCubeTextured(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 c, glm
     s.setVec3("material.diffuse", c);
     s.setVec3("material.specular", glm::vec3(0.3f));
     s.setFloat("material.shininess", sh);
+    s.setFloat("alpha", a);
     if (texturesEnabled && tex != 0)
     {
         s.setBool("useTexture", true);
@@ -785,6 +787,7 @@ void drawCubeProc(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::ve
     s.setVec3("material.diffuse", glm::vec3(0.7f));
     s.setVec3("material.specular", glm::vec3(0.2f));
     s.setFloat("material.shininess", 16.0f);
+    s.setFloat("alpha", 1.0f);
     s.setBool("useTexture", false);
     s.setBool("useProceduralWall", true);
     s.setMat4("model", m);
@@ -903,12 +906,20 @@ void drawIceCreamFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm:
     // Curved/slanted glass front approximation using an angled transparent cube
     glm::mat4 g = glm::translate(m, {0, 1.5f, 0.2f});
     g = glm::rotate(g, glm::radians(-25.0f), {1, 0, 0});
+    
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+    
     drawCube(v, s, g, C_GLASS, {0, 0, 0}, {4.0f, 1.2f, 0.05f}, 128, 0.3f);
     
     // Glass sides and top
     drawCube(v, s, m, C_GLASS, {-1.95f, 1.6f, -0.4f}, {0.05f, 1.0f, 1.2f}, 128, 0.3f);
     drawCube(v, s, m, C_GLASS, {1.95f, 1.6f, -0.4f}, {0.05f, 1.0f, 1.2f}, 128, 0.3f);
     drawCube(v, s, m, C_GLASS, {0, 2.1f, -0.4f}, {4.0f, 0.05f, 1.2f}, 128, 0.3f);
+
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
 
     // Textured panel at lower front
     drawCubeTextured(texCube, s, m, glm::vec3(0.9f), {0, 0.6f, 1.02f}, {3.5f, 0.8f, 0.02f}, texIceCream, 1.0f, 32.0f);
@@ -923,10 +934,6 @@ void drawDrinksFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm::m
     drawCube(v, s, m, glm::vec3(0.1f), {0, 1.5f, 0}, {3.0f, 3.0f, 2.0f});
     drawCubeTextured(texCube, s, m, glm::vec3(1.0f), {0, 3.3f, 1.01f}, {3.0f, 0.6f, 0.02f}, texCoke, 1.0f, 64.0f);
 
-    // Glass doors
-    drawCube(v, s, m, C_GLASS, {-0.8f, 1.5f, 1.01f}, {1.35f, 2.9f, 0.05f}, 128, 0.3f);
-    drawCube(v, s, m, C_GLASS, {0.8f, 1.5f, 1.01f}, {1.35f, 2.9f, 0.05f}, 128, 0.3f);
-    
     // Middle divider
     drawCube(v, s, m, glm::vec3(0.05f), {0, 1.5f, 1.03f}, {0.1f, 2.9f, 0.05f});
 
@@ -944,6 +951,17 @@ void drawDrinksFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm::m
             }
         }
     }
+
+    // Glass doors
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    drawCube(v, s, m, C_GLASS, {-0.8f, 1.5f, 1.01f}, {1.35f, 2.9f, 0.05f}, 128, 0.3f);
+    drawCube(v, s, m, C_GLASS, {0.8f, 1.5f, 1.01f}, {1.35f, 2.9f, 0.05f}, 128, 0.3f);
+
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
 }
 
 void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm)
@@ -968,26 +986,21 @@ void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm)
     // --- West Wall (Facing East, X = -28 bounding to -38) ---
     // Placed south of Washroom (which ends at Z = -20).
     // Available free West wall: Z = -18 to Z = 5. We'll place 1 stall at Z=-8.
-    glm::mat4 wMat = glm::translate(pm, {-28.0f, fY, -5.0f});
-    wMat = glm::rotate(wMat, glm::radians(-90.0f), {0, 1, 0});
-    drawFoodShop(v, s, pm, {-28.0f, fY, -5.0f}, stallColors[3], -90.0f);
+    glm::mat4 wMat = glm::translate(pm, {-27.0f, fY, -5.0f});
+    wMat = glm::rotate(wMat, glm::radians(90.0f), {0, 1, 0});
+    drawFoodShop(v, s, pm, {-27.0f, fY, -5.0f}, stallColors[3], 90.0f);
     drawCubeTextured(texCubeVAO, s, wMat, glm::vec3(0.95f), {0.0f, 6.0f, 0.2f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
 
     // --- East Wall (Facing West, X = 28 bounding to 38) ---
-    // Long free wall. We can place 2 stalls at Z = -15 and Z = 0.
-    glm::mat4 eMat1 = glm::translate(pm, {28.0f, fY, -15.0f});
-    eMat1 = glm::rotate(eMat1, glm::radians(90.0f), {0, 1, 0});
-    drawFoodShop(v, s, pm, {28.0f, fY, -15.0f}, stallColors[4], 90.0f);
+    // Only 1 stall (Purple) as requested.
+    glm::mat4 eMat1 = glm::translate(pm, {27.0f, fY, -15.0f});
+    eMat1 = glm::rotate(eMat1, glm::radians(-90.0f), {0, 1, 0});
+    drawFoodShop(v, s, pm, {27.0f, fY, -15.0f}, stallColors[4], -90.0f);
     drawCubeTextured(texCubeVAO, s, eMat1, glm::vec3(0.95f), {0.0f, 6.0f, 0.2f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
-    
-    glm::mat4 eMat2 = glm::translate(pm, {28.0f, fY, 0.0f});
-    eMat2 = glm::rotate(eMat2, glm::radians(90.0f), {0, 1, 0});
-    drawFoodShop(v, s, pm, {28.0f, fY, 0.0f}, stallColors[0], 90.0f);
-    drawCubeTextured(texCubeVAO, s, eMat2, glm::vec3(0.95f), {0.0f, 6.0f, 0.2f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
 
-    // Freezers
-    drawIceCreamFreezer(v, texCubeVAO, s, pm, {-16.0f, fY, -12.0f}, 45.0f);
-    drawDrinksFreezer(v, texCubeVAO, s, pm, {18.0f, fY, -6.0f}, -45.0f);
+    // Freezers (Right side / East Wall)
+    drawDrinksFreezer(v, texCubeVAO, s, pm, {27.0f, fY, -6.0f}, -90.0f);
+    drawIceCreamFreezer(v, texCubeVAO, s, pm, {27.0f, fY, -0.0f}, -90.0f);
 
     // 3. Dining Sets (Center Area)
     // Grid bounded to X: -20 to 16, Z: -18 to 2

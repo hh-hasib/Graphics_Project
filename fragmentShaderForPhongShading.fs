@@ -61,6 +61,7 @@ uniform bool blendWithColor;
 uniform sampler2D texture1;
 uniform float texTiling;
 uniform bool useProceduralWall;
+uniform float alpha;
 
 // Day/Night interpolation factor (0.0 = full day, 1.0 = full night)
 uniform float dayNightMix;
@@ -135,7 +136,7 @@ void main()
         result += CalcSpotLight(mat, spotLights[i], N, FragPos, V);
     }
 
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(result, alpha);
 }
 
 vec3 CalcPointLight(Material mat, PointLight light, vec3 N, vec3 Pos, vec3 V)

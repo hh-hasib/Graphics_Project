@@ -36,6 +36,7 @@ public:
         shader.setVec3("material.diffuse", color);
         shader.setVec3("material.specular", glm::vec3(0.5f));
         shader.setFloat("material.shininess", 32.0f);
+        shader.setFloat("alpha", 1.0f);
         if (tex != 0) {
             shader.setBool("useTexture", true);
             shader.setFloat("texTiling", tiling);
