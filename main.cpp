@@ -13,6 +13,7 @@
 #include "pyramid.h"
 #include "bezierCurve.h"
 #include "fractalTree.h"
+#include "cylinder.h"
 #include "stb_image.h"
 #include <iostream>
 #include <vector>
@@ -29,6 +30,13 @@ void drawCubeTextured(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 c, glm
 void drawCubeProc(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 sc);
 unsigned int loadTexture(const char *path);
 void drawScene(unsigned int &, unsigned int &, Shader &, Shader &, glm::mat4, glm::mat4);
+
+// Food Court declarations
+void drawFoodShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color);
+void drawChair(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, float roty);
+void drawDiningSet(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p);
+void drawWashroom(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p);
+void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm);
 
 // Settings
 unsigned int SCR_WIDTH = 1400, SCR_HEIGHT = 900;
@@ -205,7 +213,7 @@ float entranceDoorOffset = 0.0f; // 0=closed, 1=open
 // Texture IDs
 unsigned int texCubeVAO = 0;
 unsigned int texFloor = 0, texFashion = 0, texTech = 0, texGems = 0, texFood = 0, texTreeLeaf = 0, texTreeBark = 0, texGrass = 0;
-unsigned int texKitkat = 0, texMovie = 0;
+unsigned int texKitkat = 0, texMovie = 0, texIceCream = 0, texCoke = 0;
 
 // Spheres
 Sphere *sphWheel = nullptr;
@@ -222,6 +230,9 @@ FractalTree *fractalTrees[NUM_TREES] = {};
 // Bezier furniture objects
 BezierRevolvedSurface *bezierTable = nullptr;
 BezierArch *bezierArch = nullptr;
+
+// Cylinder
+Cylinder *cylinderObj = nullptr;
 
 // MAIN
 int main()
@@ -337,6 +348,8 @@ int main()
     texGrass = loadTexture("grass.jpg");
     texKitkat = loadTexture("kitkat_poster.jpg");
     texMovie = loadTexture("movie_poster.jpg");
+    texIceCream = loadTexture("icecream.jpg");
+    texCoke = loadTexture("cocacola.png");
 
     for (int i = 0; i < NUM_POINT_LIGHTS; i++)
     {
@@ -410,6 +423,9 @@ int main()
         };
         bezierArch->generate(archProfile, 20, 0.3f);
     }
+
+    // Create Cylinder for cans
+    cylinderObj = new Cylinder(36, 0.5f, 1.0f);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -679,6 +695,7 @@ int main()
     for (int i = 0; i < 5; i++)
         delete sphLeaf[i];
     delete treeCone;
+    delete cylinderObj;
     glDeleteVertexArrays(1, &cubeVAO);
     glDeleteVertexArrays(1, &lightVAO);
     glDeleteVertexArrays(1, &texCubeVAO);
@@ -774,6 +791,214 @@ void drawCubeProc(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::ve
     glBindVertexArray(v);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     s.setBool("useProceduralWall", false);
+}
+
+// ============================================================
+// FOOD COURT FUNCTIONS (2ND FLOOR)
+// ============================================================
+
+void drawFoodShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color, float roty = 0.0f)
+{
+    glm::mat4 m = glm::translate(pm, p);
+    m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
+    
+    // Front counter
+    drawCube(v, s, m, C_COUNTER, {0, 0.45f, 0}, {12.0f, 0.9f, 2.0f});
+    drawCube(v, s, m, color, {0, 0.9f, 0}, {12.2f, 0.1f, 2.2f}); // Counter top
+    
+    // Back wall
+    drawCube(v, s, m, color * 0.8f, {0, 3.5f, -9.8f}, {12.0f, 7.0f, 0.4f});
+    
+    // Side walls
+    drawCube(v, s, m, color * 0.9f, {-5.8f, 3.5f, -4.8f}, {0.4f, 7.0f, 9.6f});
+    drawCube(v, s, m, color * 0.9f, {5.8f, 3.5f, -4.8f}, {0.4f, 7.0f, 9.6f});
+
+    // Top awning / Menu board (angled)
+    glm::mat4 awk = glm::translate(m, {0, 6.2f, 0});
+    awk = glm::rotate(awk, glm::radians(20.0f), {1, 0, 0});
+    drawCube(v, s, awk, color, {0, 0, 0}, {12.4f, 1.5f, 0.2f});
+}
+
+void drawChair(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, float roty)
+{
+    glm::mat4 m = glm::translate(pm, p);
+    m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
+    
+    // Seat
+    drawCube(v, s, m, C_CHAIR, {0, 0.45f, 0}, {0.5f, 0.05f, 0.5f});
+    
+    // Legs
+    float lOff = 0.2f;
+    drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.225f, -lOff}, {0.05f, 0.45f, 0.05f});
+    drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.225f, -lOff}, {0.05f, 0.45f, 0.05f});
+    drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.225f, lOff}, {0.05f, 0.45f, 0.05f});
+    drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.225f, lOff}, {0.05f, 0.45f, 0.05f});
+    
+    // Backrest (rear legs extended, local +Z is "back")
+    drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.7f, lOff}, {0.05f, 0.5f, 0.05f});
+    drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.7f, lOff}, {0.05f, 0.5f, 0.05f});
+    drawCube(v, s, m, C_CHAIR, {0, 0.85f, lOff}, {0.5f, 0.2f, 0.05f});
+}
+
+void drawDiningSet(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p)
+{
+    glm::mat4 m = glm::translate(pm, p);
+    
+    // Central Table leg
+    drawCube(v, s, m, C_TABLE * 0.6f, {0, 0.4f, 0}, {0.15f, 0.8f, 0.15f});
+    drawCube(v, s, m, C_TABLE * 0.5f, {0, 0.02f, 0}, {0.6f, 0.04f, 0.6f}); // Base plate
+
+    // Table top using bezierTable
+    if (bezierTable != nullptr) {
+        glm::mat4 tm = glm::translate(m, {0, 0.8f, 0});
+        tm = glm::scale(tm, glm::vec3(1.6f, 1.0f, 1.6f)); 
+        bezierTable->draw(s, tm, C_TABLE);
+    } else {
+        drawCube(v, s, m, C_TABLE, {0, 0.82f, 0}, {1.8f, 0.05f, 1.8f});
+    }
+
+    // 4 Chairs arranged radially
+    drawChair(v, s, m, {0, 0, 1.2f}, 0);     // South chair (faces North)
+    drawChair(v, s, m, {0, 0, -1.2f}, 180);  // North chair (faces South)
+    drawChair(v, s, m, {-1.2f, 0, 0}, -90);  // West chair (faces East)
+    drawChair(v, s, m, {1.2f, 0, 0}, 90);    // East chair (faces West)
+}
+
+void drawWashroom(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p)
+{
+    glm::mat4 m = glm::translate(pm, p);
+    drawCube(v, s, m, C_WASH, {0, 0.03f, 0}, {14.0f, 0.04f, 18.0f}); // floor
+    
+    // East wall (X = 7.0)
+    drawCube(v, s, m, C_WASH * 0.95f, {7.0f, 3.5f, -1.0f}, {0.3f, 7.0f, 20.0f});
+    // South wall (Z = 9.0) with a door gap in the middle
+    drawCube(v, s, m, C_WASH * 0.95f, {-3.5f, 3.5f, 9.0f}, {7.0f, 7.0f, 0.3f});  // left of door
+    drawCube(v, s, m, C_WASH * 0.95f, {5.5f, 3.5f, 9.0f}, {3.0f, 7.0f, 0.3f});   // right of door
+    // Door header
+    drawCube(v, s, m, C_WASH * 0.95f, {2.0f, 5.5f, 9.0f}, {4.0f, 3.0f, 0.3f});
+    
+    // Inside partitions for stalls
+    for (int i = 0; i < 3; i++) {
+        float px = -5.0f + i * 3.5f;
+        drawCube(v, s, m, C_WASH * 0.88f, {px, 2.0f, -6.0f}, {0.1f, 4.0f, 6.0f});
+        if (i < 3) {
+            drawCube(v, s, m, C_WASH * 0.85f, {px + 1.75f, 2.0f, -3.0f}, {3.4f, 3.8f, 0.1f}); // door
+        }
+    }
+    // Sinks against the East wall
+    drawCube(v, s, m, glm::vec3(0.9f), {6.0f, 0.9f, 2.0f}, {1.5f, 0.1f, 8.0f});
+    // Mirror
+    drawCube(v, s, m, C_MIRROR, {6.8f, 2.0f, 2.0f}, {0.1f, 1.5f, 8.0f}, 128, 0.3f);
+    // Washroom sign
+    drawCube(v, s, m, C_LAMP, {4.1f, FLOOR_H - 0.3f, 9.2f}, {0.6f, 0.6f, 0.1f});
+}
+
+void drawIceCreamFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm::mat4 pm, glm::vec3 p, float roty)
+{
+    glm::mat4 m = glm::translate(pm, p);
+    m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
+    
+    // Base unit
+    drawCube(v, s, m, glm::vec3(0.85f), {0, 0.6f, 0}, {4.0f, 1.2f, 2.0f});
+    // Curved/slanted glass front approximation using an angled transparent cube
+    glm::mat4 g = glm::translate(m, {0, 1.5f, 0.2f});
+    g = glm::rotate(g, glm::radians(-25.0f), {1, 0, 0});
+    drawCube(v, s, g, C_GLASS, {0, 0, 0}, {4.0f, 1.2f, 0.05f}, 128, 0.3f);
+    
+    // Glass sides and top
+    drawCube(v, s, m, C_GLASS, {-1.95f, 1.6f, -0.4f}, {0.05f, 1.0f, 1.2f}, 128, 0.3f);
+    drawCube(v, s, m, C_GLASS, {1.95f, 1.6f, -0.4f}, {0.05f, 1.0f, 1.2f}, 128, 0.3f);
+    drawCube(v, s, m, C_GLASS, {0, 2.1f, -0.4f}, {4.0f, 0.05f, 1.2f}, 128, 0.3f);
+
+    // Textured panel at lower front
+    drawCubeTextured(texCube, s, m, glm::vec3(0.9f), {0, 0.6f, 1.02f}, {3.5f, 0.8f, 0.02f}, texIceCream, 1.0f, 32.0f);
+}
+
+void drawDrinksFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm::mat4 pm, glm::vec3 p, float roty)
+{
+    glm::mat4 m = glm::translate(pm, p);
+    m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
+    
+    // Main body (dark red/black)
+    drawCube(v, s, m, glm::vec3(0.1f), {0, 1.5f, 0}, {3.0f, 3.0f, 2.0f});
+    drawCubeTextured(texCube, s, m, glm::vec3(1.0f), {0, 3.3f, 1.01f}, {3.0f, 0.6f, 0.02f}, texCoke, 1.0f, 64.0f);
+
+    // Glass doors
+    drawCube(v, s, m, C_GLASS, {-0.8f, 1.5f, 1.01f}, {1.35f, 2.9f, 0.05f}, 128, 0.3f);
+    drawCube(v, s, m, C_GLASS, {0.8f, 1.5f, 1.01f}, {1.35f, 2.9f, 0.05f}, 128, 0.3f);
+    
+    // Middle divider
+    drawCube(v, s, m, glm::vec3(0.05f), {0, 1.5f, 1.03f}, {0.1f, 2.9f, 0.05f});
+
+    // Populate interior shelves with bottles/cans using Cylinder
+    for(int sh = 0; sh < 4; sh++) {
+        float shy = 0.5f + sh * 0.6f;
+        drawCube(v, s, m, glm::vec3(0.8f), {0, shy, 0.5f}, {2.8f, 0.05f, 0.8f}); // shelf
+        
+        // Add cans if cylinderObj exists
+        if(cylinderObj) {
+            for(int cx = 0; cx < 4; cx++) {
+                glm::mat4 canM = glm::translate(m, {-1.0f + cx * 0.6f, shy + 0.15f, 0.6f});
+                canM = glm::scale(canM, glm::vec3(0.2f, 0.3f, 0.2f));
+                cylinderObj->draw(s, canM, glm::vec3(1.0f), texCoke, 1.0f);
+            }
+        }
+    }
+}
+
+void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm)
+{
+    float fY = FLOOR_Y[2];
+    
+    // 1. Washroom (NW Corner: Center at X = -31, Z = -29)
+    drawWashroom(v, s, pm, {-31.0f, fY, -29.0f});
+    
+    glm::vec3 stallColors[5] = {C_STALL_RED, C_STALL_YEL, C_STALL_GRN, C_STALL_ORG, C_STALL_PUR};
+    
+    // 2. Food Shops (3 sides: North, East, West)
+    // --- North Wall (Facing South, Z = -28 bounding to -38) ---
+    // Place 3 stalls strictly between washroom edge (X = -24) and East wall edge (X = 38).
+    // Width points: X = -12, X = 4, X = 20.
+    for(int i = 0; i < 3; i++) {
+        float sx = -10.0f + i * 14.0f;
+        drawFoodShop(v, s, pm, {sx, fY, -28.0f}, stallColors[i], 0.0f);
+        drawCubeTextured(texCubeVAO, s, pm, glm::vec3(0.95f), {sx, fY + 6.0f, -27.8f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
+    }
+    
+    // --- West Wall (Facing East, X = -28 bounding to -38) ---
+    // Placed south of Washroom (which ends at Z = -20).
+    // Available free West wall: Z = -18 to Z = 5. We'll place 1 stall at Z=-8.
+    glm::mat4 wMat = glm::translate(pm, {-28.0f, fY, -5.0f});
+    wMat = glm::rotate(wMat, glm::radians(-90.0f), {0, 1, 0});
+    drawFoodShop(v, s, pm, {-28.0f, fY, -5.0f}, stallColors[3], -90.0f);
+    drawCubeTextured(texCubeVAO, s, wMat, glm::vec3(0.95f), {0.0f, 6.0f, 0.2f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
+
+    // --- East Wall (Facing West, X = 28 bounding to 38) ---
+    // Long free wall. We can place 2 stalls at Z = -15 and Z = 0.
+    glm::mat4 eMat1 = glm::translate(pm, {28.0f, fY, -15.0f});
+    eMat1 = glm::rotate(eMat1, glm::radians(90.0f), {0, 1, 0});
+    drawFoodShop(v, s, pm, {28.0f, fY, -15.0f}, stallColors[4], 90.0f);
+    drawCubeTextured(texCubeVAO, s, eMat1, glm::vec3(0.95f), {0.0f, 6.0f, 0.2f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
+    
+    glm::mat4 eMat2 = glm::translate(pm, {28.0f, fY, 0.0f});
+    eMat2 = glm::rotate(eMat2, glm::radians(90.0f), {0, 1, 0});
+    drawFoodShop(v, s, pm, {28.0f, fY, 0.0f}, stallColors[0], 90.0f);
+    drawCubeTextured(texCubeVAO, s, eMat2, glm::vec3(0.95f), {0.0f, 6.0f, 0.2f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
+
+    // Freezers
+    drawIceCreamFreezer(v, texCubeVAO, s, pm, {-16.0f, fY, -12.0f}, 45.0f);
+    drawDrinksFreezer(v, texCubeVAO, s, pm, {18.0f, fY, -6.0f}, -45.0f);
+
+    // 3. Dining Sets (Center Area)
+    // Grid bounded to X: -20 to 16, Z: -18 to 2
+    for(int r = 0; r < 3; r++) {
+        for(int c = 0; c < 5; c++) {
+            float dx = -18.0f + c * 8.0f;
+            float dz = -16.0f + r * 9.0f;
+            if (c == 2 && r == 1) continue; // skip center
+            drawDiningSet(v, s, pm, {dx, fY, dz});
+        }
+    }
 }
 
 // DRAW SCENE
@@ -1528,6 +1753,11 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             // 1st floor corridor walls
             drawCube(V, ls, I, C_CORR, {-30, midY, -30}, {16, FLOOR_H, WT});
             drawCube(V, ls, I, C_CORR, {30, midY, -30}, {16, FLOOR_H, WT});
+        }
+        else if (fl == 2)
+        {
+            // 2nd floor Food Court
+            drawFoodCourt(V, ls, I);
         }
     }
 
