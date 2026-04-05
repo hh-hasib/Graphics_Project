@@ -213,7 +213,7 @@ float entranceDoorOffset = 0.0f; // 0=closed, 1=open
 // Texture IDs
 unsigned int texCubeVAO = 0;
 unsigned int texFloor = 0, texFashion = 0, texTech = 0, texGems = 0, texFood = 0, texTreeLeaf = 0, texTreeBark = 0, texGrass = 0;
-unsigned int texKitkat = 0, texMovie = 0, texIceCream = 0, texCoke = 0;
+unsigned int texKitkat = 0, texMovie = 0, texIceCream = 0, texCoke = 0, texColdDrink = 0;
 
 // Spheres
 Sphere *sphWheel = nullptr;
@@ -350,6 +350,7 @@ int main()
     texMovie = loadTexture("movie_poster.jpg");
     texIceCream = loadTexture("icecream.jpg");
     texCoke = loadTexture("cocacola.png");
+    texColdDrink = loadTexture("colddrink.jpg");
 
     for (int i = 0; i < NUM_POINT_LIGHTS; i++)
     {
@@ -930,9 +931,19 @@ void drawDrinksFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm::m
     glm::mat4 m = glm::translate(pm, p);
     m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
     
-    // Main body (dark red/black)
-    drawCube(v, s, m, glm::vec3(0.1f), {0, 1.5f, 0}, {3.0f, 3.0f, 2.0f});
-    drawCubeTextured(texCube, s, m, glm::vec3(1.0f), {0, 3.3f, 1.01f}, {3.0f, 0.6f, 0.02f}, texCoke, 1.0f, 64.0f);
+    // Main body (Hollowed out)
+    // Back wall
+    drawCube(v, s, m, glm::vec3(0.1f), {0, 1.5f, -0.9f}, {3.0f, 3.0f, 0.2f});
+    // Side walls
+    drawCube(v, s, m, glm::vec3(0.1f), {-1.4f, 1.5f, 0.0f}, {0.2f, 3.0f, 2.0f});
+    drawCube(v, s, m, glm::vec3(0.1f), {1.4f, 1.5f, 0.0f}, {0.2f, 3.0f, 2.0f});
+    // Top wall
+    drawCube(v, s, m, glm::vec3(0.1f), {0, 2.9f, 0.0f}, {3.0f, 0.2f, 2.0f});
+    // Bottom wall
+    drawCube(v, s, m, glm::vec3(0.1f), {0, 0.1f, 0.0f}, {3.0f, 0.2f, 2.0f});
+
+    // Top marquee texture
+    drawCubeTextured(texCube, s, m, glm::vec3(1.0f), {0, 3.3f, 1.01f}, {3.0f, 0.6f, 0.02f}, texColdDrink, 1.0f, 64.0f);
 
     // Middle divider
     drawCube(v, s, m, glm::vec3(0.05f), {0, 1.5f, 1.03f}, {0.1f, 2.9f, 0.05f});
