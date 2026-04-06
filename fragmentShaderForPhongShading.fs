@@ -61,6 +61,7 @@ uniform bool blendWithColor;
 uniform sampler2D texture1;
 uniform float texTiling;
 uniform bool useProceduralWall;
+uniform bool useProceduralShop;
 uniform float alpha;
 
 // Day/Night interpolation factor (0.0 = full day, 1.0 = full night)
@@ -112,6 +113,15 @@ void main()
         vec3 wc = proceduralWallColor(FragPos);
         mat.ambient = wc * 0.6;
         mat.diffuse = wc;
+    }
+    if(useProceduralShop) {
+        float size = 5.0;
+        float ax = abs(fract(FragPos.x * size + FragPos.z * size) - 0.5);
+        float ay = abs(fract(FragPos.y * size) - 0.5);
+        float diamond = smoothstep(0.35, 0.45, ax + ay);
+        vec3 shopCol = mix(mat.diffuse * 0.75, mat.diffuse, diamond);
+        mat.ambient = shopCol * 0.5;
+        mat.diffuse = shopCol;
     }
 
     // Day/Night ambient blending

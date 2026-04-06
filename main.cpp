@@ -28,11 +28,12 @@ void processInput(GLFWwindow *);
 void drawCube(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 c, glm::vec3 p, glm::vec3 sc, float sh = 32, float a = 1.0f);
 void drawCubeTextured(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 c, glm::vec3 p, glm::vec3 sc, unsigned int tex, float tiling = 1.0f, float sh = 32, float a = 1.0f);
 void drawCubeProc(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 sc);
+void drawCubeProcShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 c, glm::vec3 p, glm::vec3 sc);
 unsigned int loadTexture(const char *path);
 void drawScene(unsigned int &, unsigned int &, Shader &, Shader &, glm::mat4, glm::mat4);
 
 // Food Court declarations
-void drawFoodShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color);
+void drawFoodShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color, float roty, unsigned int shopTex);
 void drawChair(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, float roty);
 void drawDiningSet(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p);
 void drawWashroom(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p);
@@ -79,6 +80,7 @@ const glm::vec3 C_BARRIER_R(0.90f, 0.15f, 0.10f);
 const glm::vec3 C_FLOOR(0.82f, 0.78f, 0.72f); // mall floor
 const glm::vec3 C_CEILING(0.93f, 0.91f, 0.89f);
 const glm::vec3 C_CORR(0.85f, 0.83f, 0.78f); // corridor wall
+const glm::vec3 C_WOOD(0.5f, 0.35f, 0.2f); // wood furniture
 // Fashion shop - PINK walls (from reference)
 const glm::vec3 C_FASH_WALL(0.95f, 0.68f, 0.72f);
 const glm::vec3 C_FASH_FLOOR(0.78f, 0.65f, 0.55f);
@@ -214,6 +216,7 @@ float entranceDoorOffset = 0.0f; // 0=closed, 1=open
 unsigned int texCubeVAO = 0;
 unsigned int texFloor = 0, texFashion = 0, texTech = 0, texGems = 0, texFood = 0, texTreeLeaf = 0, texTreeBark = 0, texGrass = 0;
 unsigned int texKitkat = 0, texMovie = 0, texIceCream = 0, texCoke = 0, texColdDrink = 0;
+unsigned int texBiriyani = 0, texCake = 0, texCoffee = 0, texMcdonalds = 0, texPizza = 0, texWood = 0;
 
 // Spheres
 Sphere *sphWheel = nullptr;
@@ -351,6 +354,12 @@ int main()
     texIceCream = loadTexture("icecream.jpg");
     texCoke = loadTexture("cocacola.png");
     texColdDrink = loadTexture("colddrink.jpg");
+    texBiriyani = loadTexture("biriyani.jpg");
+    texCake = loadTexture("cake.jpg");
+    texCoffee = loadTexture("coffee.jpg");
+    texMcdonalds = loadTexture("mcdonalds.jpg");
+    texPizza = loadTexture("pizza.jpg");
+    texWood = loadTexture("woodenTexture.jpg");
 
     for (int i = 0; i < NUM_POINT_LIGHTS; i++)
     {
@@ -797,30 +806,81 @@ void drawCubeProc(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::ve
     s.setBool("useProceduralWall", false);
 }
 
+// DRAW CUBE WITH PROCEDURAL SHOP TEXTURE
+void drawCubeProcShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 c, glm::vec3 p, glm::vec3 sc)
+{
+    s.use();
+    glm::mat4 m = glm::translate(pm, p);
+    m = glm::scale(m, sc);
+    s.setVec3("material.ambient", c * 1.0f);
+    s.setVec3("material.diffuse", c);
+    s.setVec3("material.specular", glm::vec3(0.2f));
+    s.setFloat("material.shininess", 16.0f);
+    s.setFloat("alpha", 1.0f);
+    s.setBool("useTexture", false);
+    s.setBool("useProceduralWall", false);
+    s.setBool("useProceduralShop", true);
+    s.setMat4("model", m);
+    glBindVertexArray(v);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    s.setBool("useProceduralShop", false);
+}
+
 // ============================================================
 // FOOD COURT FUNCTIONS (2ND FLOOR)
 // ============================================================
 
-void drawFoodShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color, float roty = 0.0f)
+void drawFoodShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color, float roty, unsigned int shopTex)
 {
     glm::mat4 m = glm::translate(pm, p);
     m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
     
     // Front counter
-    drawCube(v, s, m, C_COUNTER, {0, 0.45f, 0}, {12.0f, 0.9f, 2.0f});
+    drawCubeTextured(texCubeVAO, s, m, glm::vec3(0.9f), {0, 0.45f, 0}, {12.0f, 0.9f, 2.0f}, texWood, 1.0f, 32.0f);
     drawCube(v, s, m, color, {0, 0.9f, 0}, {12.2f, 0.1f, 2.2f}); // Counter top
     
     // Back wall
-    drawCube(v, s, m, color * 0.8f, {0, 3.5f, -9.8f}, {12.0f, 7.0f, 0.4f});
+    drawCubeProcShop(v, s, m, color * 0.8f, {0, 3.5f, -9.8f}, {12.0f, 7.0f, 0.4f});
+    // Poster on the back wall
+    drawCubeTextured(texCubeVAO, s, m, glm::vec3(1.0f), {0, 3.5f, -9.58f}, {10.0f, 6.0f, 0.04f}, shopTex, 1.0f, 32.0f);
     
     // Side walls
-    drawCube(v, s, m, color * 0.9f, {-5.8f, 3.5f, -4.8f}, {0.4f, 7.0f, 9.6f});
-    drawCube(v, s, m, color * 0.9f, {5.8f, 3.5f, -4.8f}, {0.4f, 7.0f, 9.6f});
+    drawCubeProcShop(v, s, m, color * 0.9f, {-5.8f, 3.5f, -4.8f}, {0.4f, 7.0f, 9.6f});
+    drawCubeProcShop(v, s, m, color * 0.9f, {5.8f, 3.5f, -4.8f}, {0.4f, 7.0f, 9.6f});
 
     // Top awning / Menu board (angled)
     glm::mat4 awk = glm::translate(m, {0, 6.2f, 0});
     awk = glm::rotate(awk, glm::radians(20.0f), {1, 0, 0});
-    drawCube(v, s, awk, color, {0, 0, 0}, {12.4f, 1.5f, 0.2f});
+    drawCubeTextured(texCubeVAO, s, awk, glm::vec3(0.95f), {0, 0, 0}, {12.0f, 1.5f, 0.2f}, shopTex, 1.0f, 16.0f);
+
+    // Racks on right wall (X = 5.8)
+    drawCube(v, s, m, C_WOOD, {4.6f, 2.0f, -6.0f}, {2.0f, 0.1f, 4.0f}); // rack 1
+    drawCube(v, s, m, C_WOOD, {4.6f, 3.5f, -6.0f}, {2.0f, 0.1f, 4.0f}); // rack 2
+    drawCube(v, s, m, C_WOOD, {4.6f, 5.0f, -6.0f}, {2.0f, 0.1f, 4.0f}); // rack 3
+
+    // Items on right racks (Cans)
+    if(cylinderObj) {
+        for(int cy = 0; cy < 3; cy++) {
+            float ry = 2.2f + cy * 1.5f;
+            for(int cx = 0; cx < 4; cx++) {
+                glm::mat4 canM = glm::translate(m, {4.6f, ry, -7.0f + cx * 0.6f});
+                canM = glm::scale(canM, glm::vec3(0.3f, 0.4f, 0.3f));
+                cylinderObj->draw(s, canM, glm::vec3(1.0f), shopTex, 1.0f);
+            }
+        }
+    }
+
+    // Cash Register on counter (Right side)
+    drawCube(v, s, m, glm::vec3(0.1f), {3.0f, 1.25f, 0.5f}, {1.0f, 0.6f, 0.8f}); // base
+    drawCube(v, s, m, glm::vec3(0.3f), {3.0f, 1.6f, 0.6f}, {0.8f, 0.5f, 0.1f}); // screen
+    
+    // Coffee Maker / Machine (Left side)
+    drawCube(v, s, m, glm::vec3(0.05f), {-3.5f, 1.4f, 0.5f}, {1.5f, 0.9f, 1.0f}); // machine body
+    drawCube(v, s, m, glm::vec3(0.6f), {-3.5f, 1.15f, 0.5f}, {0.9f, 0.4f, 0.8f}); // tray
+
+    // Box stack on the counter
+    drawCubeTextured(texCubeVAO, s, m, glm::vec3(0.9f), {-1.0f, 1.02f, 0.5f}, {1.2f, 0.08f, 1.2f}, shopTex, 1.0f, 32.0f);
+    drawCubeTextured(texCubeVAO, s, m, glm::vec3(0.9f), {-1.0f, 1.1f, 0.5f}, {1.2f, 0.08f, 1.2f}, shopTex, 1.0f, 32.0f);
 }
 
 void drawChair(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, float roty)
@@ -983,6 +1043,7 @@ void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm)
     drawWashroom(v, s, pm, {-31.0f, fY, -29.0f});
     
     glm::vec3 stallColors[5] = {C_STALL_RED, C_STALL_YEL, C_STALL_GRN, C_STALL_ORG, C_STALL_PUR};
+    unsigned int shopTextures[5] = {texMcdonalds, texBiriyani, texPizza, texCake, texCoffee};
     
     // 2. Food Shops (3 sides: North, East, West)
     // --- North Wall (Facing South, Z = -28 bounding to -38) ---
@@ -990,24 +1051,17 @@ void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm)
     // Width points: X = -12, X = 4, X = 20.
     for(int i = 0; i < 3; i++) {
         float sx = -10.0f + i * 14.0f;
-        drawFoodShop(v, s, pm, {sx, fY, -28.0f}, stallColors[i], 0.0f);
-        drawCubeTextured(texCubeVAO, s, pm, glm::vec3(0.95f), {sx, fY + 6.0f, -27.8f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
+        drawFoodShop(v, s, pm, {sx, fY, -28.0f}, stallColors[i], 0.0f, shopTextures[i]);
     }
     
     // --- West Wall (Facing East, X = -28 bounding to -38) ---
     // Placed south of Washroom (which ends at Z = -20).
     // Available free West wall: Z = -18 to Z = 5. We'll place 1 stall at Z=-8.
-    glm::mat4 wMat = glm::translate(pm, {-27.0f, fY, -5.0f});
-    wMat = glm::rotate(wMat, glm::radians(90.0f), {0, 1, 0});
-    drawFoodShop(v, s, pm, {-27.0f, fY, -5.0f}, stallColors[3], 90.0f);
-    drawCubeTextured(texCubeVAO, s, wMat, glm::vec3(0.95f), {0.0f, 6.0f, 0.2f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
+    drawFoodShop(v, s, pm, {-27.0f, fY, -5.0f}, stallColors[3], 90.0f, shopTextures[3]);
 
     // --- East Wall (Facing West, X = 28 bounding to 38) ---
     // Only 1 stall (Purple) as requested.
-    glm::mat4 eMat1 = glm::translate(pm, {27.0f, fY, -15.0f});
-    eMat1 = glm::rotate(eMat1, glm::radians(-90.0f), {0, 1, 0});
-    drawFoodShop(v, s, pm, {27.0f, fY, -15.0f}, stallColors[4], -90.0f);
-    drawCubeTextured(texCubeVAO, s, eMat1, glm::vec3(0.95f), {0.0f, 6.0f, 0.2f}, {10.0f, 1.5f, 0.1f}, texFood, 1.0f, 16.0f);
+    drawFoodShop(v, s, pm, {27.0f, fY, -15.0f}, stallColors[4], -90.0f, shopTextures[4]);
 
     // Freezers (Right side / East Wall)
     drawDrinksFreezer(v, texCubeVAO, s, pm, {27.0f, fY, -6.0f}, -90.0f);
