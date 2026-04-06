@@ -17,6 +17,8 @@
 #include "stb_image.h"
 #include <iostream>
 #include <vector>
+#include "cylinder.h"
+#include "human.h"
 using namespace std;
 
 // ---- Forward Declarations ----
@@ -233,6 +235,11 @@ FractalTree *fractalTrees[NUM_TREES] = {};
 // Bezier furniture objects
 BezierRevolvedSurface *bezierTable = nullptr;
 BezierArch *bezierArch = nullptr;
+BezierRevolvedSurface *hairSurface = nullptr;
+
+// Humans
+std::vector<Human> patrons;
+std::vector<Human> shopkeepers;
 
 // Cylinder
 Cylinder *cylinderObj = nullptr;
@@ -436,6 +443,37 @@ int main()
 
     // Create Cylinder for cans
     cylinderObj = new Cylinder(36, 0.5f, 1.0f);
+
+    // Create Hair surface
+    hairSurface = new BezierRevolvedSurface();
+    {
+        std::vector<glm::vec3> hairProfile = {
+            {0.0f, 0.4f, 0.0f},
+            {0.5f, 0.3f, 0.0f},
+            {0.6f, 0.0f, 0.0f},
+            {0.65f, -0.3f, 0.0f},
+            {0.5f, -0.7f, 0.0f}
+        };
+        hairSurface->generate(hairProfile, 16, 16);
+    }
+    
+    // Initialize Humans
+    float fY = FLOOR_Y[2];
+    shopkeepers.push_back(Human({-10, fY, -33}, false, HS_SHOPKEEPER)); // McDonald's
+    shopkeepers.back().rotY = 0.0f; 
+    shopkeepers.push_back(Human({4, fY, -33}, true, HS_SHOPKEEPER)); // Biriyani
+    shopkeepers.back().rotY = 0.0f;
+    shopkeepers.push_back(Human({18, fY, -33}, false, HS_SHOPKEEPER)); // Pizza
+    shopkeepers.back().rotY = 0.0f;
+    shopkeepers.push_back(Human({-28, fY, -5}, true, HS_SHOPKEEPER)); // Cake
+    shopkeepers.back().rotY = 90.0f;
+    shopkeepers.push_back(Human({28, fY, -15}, false, HS_SHOPKEEPER)); // Coffee
+    shopkeepers.back().rotY = -90.0f;
+
+    for(int i=0; i<5; i++) {
+        bool isFem = (rand()%2 == 0);
+        patrons.push_back(Human({0, fY, 0}, isFem, HS_ROAMING));
+    }
 
     while (!glfwWindowShouldClose(window))
     {
@@ -889,19 +927,19 @@ void drawChair(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, float roty
     m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
     
     // Seat
-    drawCube(v, s, m, C_CHAIR, {0, 0.45f, 0}, {0.5f, 0.05f, 0.5f});
+    drawCube(v, s, m, C_CHAIR, {0, 0.5f, 0}, {0.6f, 0.05f, 0.6f});
     
     // Legs
-    float lOff = 0.2f;
-    drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.225f, -lOff}, {0.05f, 0.45f, 0.05f});
-    drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.225f, -lOff}, {0.05f, 0.45f, 0.05f});
-    drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.225f, lOff}, {0.05f, 0.45f, 0.05f});
-    drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.225f, lOff}, {0.05f, 0.45f, 0.05f});
+    float lOff = 0.25f;
+    drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.25f, -lOff}, {0.05f, 0.5f, 0.05f});
+    drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.25f, -lOff}, {0.05f, 0.5f, 0.05f});
+    drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.25f, lOff}, {0.05f, 0.5f, 0.05f});
+    drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.25f, lOff}, {0.05f, 0.5f, 0.05f});
     
     // Backrest (rear legs extended, local +Z is "back")
-    drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.7f, lOff}, {0.05f, 0.5f, 0.05f});
-    drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.7f, lOff}, {0.05f, 0.5f, 0.05f});
-    drawCube(v, s, m, C_CHAIR, {0, 0.85f, lOff}, {0.5f, 0.2f, 0.05f});
+    drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.75f, lOff}, {0.05f, 0.5f, 0.05f});
+    drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.75f, lOff}, {0.05f, 0.5f, 0.05f});
+    drawCube(v, s, m, C_CHAIR, {0, 0.95f, lOff}, {0.6f, 0.2f, 0.05f});
 }
 
 void drawDiningSet(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p)
@@ -909,23 +947,23 @@ void drawDiningSet(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p)
     glm::mat4 m = glm::translate(pm, p);
     
     // Central Table leg
-    drawCube(v, s, m, C_TABLE * 0.6f, {0, 0.4f, 0}, {0.15f, 0.8f, 0.15f});
-    drawCube(v, s, m, C_TABLE * 0.5f, {0, 0.02f, 0}, {0.6f, 0.04f, 0.6f}); // Base plate
+    drawCube(v, s, m, C_TABLE * 0.6f, {0, 0.45f, 0}, {0.2f, 0.9f, 0.2f});
+    drawCube(v, s, m, C_TABLE * 0.5f, {0, 0.02f, 0}, {0.8f, 0.04f, 0.8f}); // Base plate
 
     // Table top using bezierTable
     if (bezierTable != nullptr) {
-        glm::mat4 tm = glm::translate(m, {0, 0.8f, 0});
-        tm = glm::scale(tm, glm::vec3(1.6f, 1.0f, 1.6f)); 
+        glm::mat4 tm = glm::translate(m, {0, 0.9f, 0});
+        tm = glm::scale(tm, glm::vec3(2.0f, 1.0f, 2.0f)); 
         bezierTable->draw(s, tm, C_TABLE);
     } else {
-        drawCube(v, s, m, C_TABLE, {0, 0.82f, 0}, {1.8f, 0.05f, 1.8f});
+        drawCube(v, s, m, C_TABLE, {0, 0.9f, 0}, {2.2f, 0.05f, 2.2f});
     }
 
     // 4 Chairs arranged radially
-    drawChair(v, s, m, {0, 0, 1.2f}, 0);     // South chair (faces North)
-    drawChair(v, s, m, {0, 0, -1.2f}, 180);  // North chair (faces South)
-    drawChair(v, s, m, {-1.2f, 0, 0}, -90);  // West chair (faces East)
-    drawChair(v, s, m, {1.2f, 0, 0}, 90);    // East chair (faces West)
+    drawChair(v, s, m, {0, 0, 1.4f}, 0);     // South chair (faces North)
+    drawChair(v, s, m, {0, 0, -1.4f}, 180);  // North chair (faces South)
+    drawChair(v, s, m, {-1.4f, 0, 0}, -90);  // West chair (faces East)
+    drawChair(v, s, m, {1.4f, 0, 0}, 90);    // East chair (faces West)
 }
 
 void drawWashroom(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p)
@@ -1076,6 +1114,15 @@ void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm)
             if (c == 2 && r == 1) continue; // skip center
             drawDiningSet(v, s, pm, {dx, fY, dz});
         }
+    }
+
+    // Process and Draw Humans
+    for(auto &h : shopkeepers) {
+        h.draw(v, s, pm, sphWheel, hairSurface, cylinderObj);
+    }
+    for(auto &h : patrons) {
+        h.update(deltaTime);
+        h.draw(v, s, pm, sphWheel, hairSurface, cylinderObj);
     }
 }
 

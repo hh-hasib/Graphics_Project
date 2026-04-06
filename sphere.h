@@ -161,6 +161,20 @@ public:
         glBindVertexArray(0);
     }
 
+    void drawSphereWithColor(Shader &lightingShader, glm::mat4 model, glm::vec3 color, float shiny = 32.0f) const
+    {
+        lightingShader.use();
+        lightingShader.setVec3("material.ambient", color * 0.8f);
+        lightingShader.setVec3("material.diffuse", color);
+        lightingShader.setVec3("material.specular", this->specular);
+        lightingShader.setFloat("material.shininess", shiny);
+        lightingShader.setBool("useTexture", false);
+        lightingShader.setMat4("model", model);
+        glBindVertexArray(sphereVAO);
+        glDrawElements(GL_TRIANGLES, this->getIndexCount(), GL_UNSIGNED_INT, (void *)0);
+        glBindVertexArray(0);
+    }
+
     // draw with texture
     void drawSphereTextured(Shader &lightingShader, glm::mat4 model, unsigned int textureID, float tiling = 1.0f) const
     {
