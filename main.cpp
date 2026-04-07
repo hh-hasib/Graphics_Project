@@ -470,9 +470,11 @@ int main()
     shopkeepers.push_back(Human({28, fY, -15}, false, HS_SHOPKEEPER)); // Coffee
     shopkeepers.back().rotY = -90.0f;
 
-    for(int i=0; i<5; i++) {
+    for(int i=0; i<25; i++) {
         bool isFem = (rand()%2 == 0);
-        patrons.push_back(Human({0, fY, 0}, isFem, HS_ROAMING));
+        float randX = -20.0f + (rand() % 400) / 10.0f;
+        float randZ = -25.0f + (rand() % 200) / 10.0f;
+        patrons.push_back(Human({randX, fY, randZ}, isFem, HS_ROAMING));
     }
 
     while (!glfwWindowShouldClose(window))
@@ -779,8 +781,14 @@ unsigned int loadTexture(const char *path)
     unsigned char *data = stbi_load(path, &w, &h, &ch, 0);
     if (data)
     {
-        GLenum fmt = ch == 4 ? GL_RGBA : GL_RGB;
+        GLenum fmt;
+        if (ch == 1) fmt = GL_RED;
+        else if (ch == 3) fmt = GL_RGB;
+        else if (ch == 4) fmt = GL_RGBA;
+        else fmt = GL_RGB;
+        
         glBindTexture(GL_TEXTURE_2D, id);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexImage2D(GL_TEXTURE_2D, 0, fmt, w, h, 0, fmt, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);

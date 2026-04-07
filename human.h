@@ -84,6 +84,7 @@ public:
         
         if (state == HS_AT_SHOP || state == HS_SITTING) {
             isMoving = false;
+            walkCycle = 0.0f; // Ensure walk posture is completely reset
             stateTimer -= dt;
             if (stateTimer <= 0) {
                 state = HS_ROAMING;
@@ -100,11 +101,14 @@ public:
             float dist = glm::length(dir);
             if (dist < 0.2f) {
                 isMoving = false;
+                pos.x = targetPos.x; // Snap precisely to target to avoid drift
+                pos.z = targetPos.z;
+
                 if (state == HS_ROAMING) {
                     // Randomly decide next state
                     int roll = rand() % 100;
-                    if(roll < 40) { 
-                        // Go to a shop
+                    if(roll < 10) { 
+                        // Go to a shop (10% chance)
                         state = HS_HEADING_TO_SHOP;
                         int s = rand() % 5;
                         if(s==0) targetPos = glm::vec3(-10, pos.y, -25);
@@ -113,24 +117,52 @@ public:
                         else if(s==3) targetPos = glm::vec3(-24, pos.y, -5);
                         else if(s==4) targetPos = glm::vec3(24, pos.y, -15);
                         isMoving = true;
-                    } else if(roll < 70) { 
-                        // Sit down at a table group
+                    } else if(roll < 95) { 
+                        // Sit down at a table group (85% chance)
                         state = HS_HEADING_TO_SEAT;
                         int sc = rand() % 5; int sr = rand() % 3;
-                        targetPos = glm::vec3(-18.0f + sc * 8.0f + 1.5f, pos.y, -16.0f + sr * 9.0f);
+                        if (sc == 2 && sr == 1) sc = 3; // avoid center table
+                        
+                        float basex = -18.0f + sc * 8.0f;
+                        float basez = -16.0f + sr * 9.0f;
+                        
+                        // Pick a random chair (0: South, 1: North, 2: West, 3: East)
+                        int chair = rand() % 4;
+                        float cx = basex, cz = basez;
+                        if (chair == 0) cz += 1.4f;
+                        else if (chair == 1) cz -= 1.4f;
+                        else if (chair == 2) cx -= 1.4f;
+                        else if (chair == 3) cx += 1.4f;
+
+                        targetPos = glm::vec3(cx, pos.y, cz);
                         isMoving = true;
                     } else { 
-                        // Roam again
+                        // Roam again (5% chance)
                         pickRandomTarget();
                         isMoving = true;
                     }
                 } else if (state == HS_HEADING_TO_SHOP) {
                     state = HS_AT_SHOP;
-                    stateTimer = 4.0f + (rand() % 4); // Order for 4-8 sec
+                    stateTimer = 5.0f + (rand() % 10); // Order for 5-15 sec
+                    walkCycle = 0.0f; // Stop walking animation
+
+                    // Face the shopkeeper perfectly
+                    if(targetPos.x == -10 || targetPos.x == 4 || targetPos.x == 18) {
+                        rotY = 180.0f; // Facing North
+                    } else if(targetPos.x == -24) {
+                        rotY = -90.0f; // Facing West
+                    } else if(targetPos.x == 24) {
+                        rotY = 90.0f; // Facing East
+                    }
                 } else if (state == HS_HEADING_TO_SEAT) {
                     state = HS_SITTING;
-                    stateTimer = 5.0f + (rand() % 10); // Sit 5-15 sec
-                    rotY = 0.0f; 
+                    stateTimer = 30.0f + (rand() % 60); // Sit 30-90 sec
+                    walkCycle = 0.0f; // Stop walking animation
+                    
+                    // Face the table center
+                    float tableX = std::round((targetPos.x + 18.0f) / 8.0f) * 8.0f - 18.0f;
+                    float tableZ = std::round((targetPos.z + 16.0f) / 9.0f) * 9.0f - 16.0f;
+                    rotY = glm::degrees(atan2(tableX - targetPos.x, tableZ - targetPos.z));
                 }
             } else {
                 dir = glm::normalize(dir);
