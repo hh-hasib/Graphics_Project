@@ -126,17 +126,34 @@ public:
                     {
                         // Go to a shop (10% chance)
                         state = HS_HEADING_TO_SHOP;
-                        int s = rand() % 5;
-                        if (s == 0)
-                            targetPos = glm::vec3(-10, pos.y, -25);
-                        else if (s == 1)
-                            targetPos = glm::vec3(4, pos.y, -25);
-                        else if (s == 2)
-                            targetPos = glm::vec3(18, pos.y, -25);
-                        else if (s == 3)
-                            targetPos = glm::vec3(-24, pos.y, -5);
-                        else if (s == 4)
-                            targetPos = glm::vec3(24, pos.y, -15);
+                        if (pos.y > 10.0f)
+                        {
+                            // 2nd floor shops
+                            int s = rand() % 5;
+                            if (s == 0)
+                                targetPos = glm::vec3(-10, pos.y, -25);
+                            else if (s == 1)
+                                targetPos = glm::vec3(4, pos.y, -25);
+                            else if (s == 2)
+                                targetPos = glm::vec3(18, pos.y, -25);
+                            else if (s == 3)
+                                targetPos = glm::vec3(-24, pos.y, -5);
+                            else if (s == 4)
+                                targetPos = glm::vec3(24, pos.y, -15);
+                        }
+                        else if (pos.y > 5.0f)
+                        {
+                            // 1st floor shops
+                            int s = rand() % 4;
+                            if (s == 0)
+                                targetPos = glm::vec3(-30, pos.y, -20); // Bookstore
+                            else if (s == 1)
+                                targetPos = glm::vec3(30, pos.y, -20); // Gems
+                            else if (s == 2)
+                                targetPos = glm::vec3(-25, pos.y, 0); // Fashion Target
+                            else if (s == 3)
+                                targetPos = glm::vec3(25, pos.y, 0); // Tech Target
+                        }
                         isMoving = true;
                     }
                     else if (roll < 95)
@@ -173,24 +190,24 @@ public:
                             if (benchIdx == 0)
                             {
                                 bx = 0;
-                                bz = -18.5f;
+                                bz = -21.5f;
                                 rY = 0;
                             } // Adjusting to atrium center (0, -14) + offset
                             else if (benchIdx == 1)
                             {
                                 bx = 0;
-                                bz = -9.5f;
+                                bz = -6.5f;
                                 rY = 180;
                             }
                             else if (benchIdx == 2)
                             {
-                                bx = -4.5f;
+                                bx = -7.5f;
                                 bz = -14.0f;
                                 rY = -90;
                             }
                             else if (benchIdx == 3)
                             {
-                                bx = 4.5f;
+                                bx = 7.5f;
                                 bz = -14.0f;
                                 rY = 90;
                             }
@@ -211,18 +228,37 @@ public:
                     stateTimer = 5.0f + (rand() % 10); // Order for 5-15 sec
                     walkCycle = 0.0f;                  // Stop walking animation
 
-                    // Face the shopkeeper perfectly
-                    if (targetPos.x == -10 || targetPos.x == 4 || targetPos.x == 18)
+                    if (pos.y > 10.0f)
                     {
-                        rotY = 180.0f; // Facing North
+                        // Face the shopkeeper perfectly (2nd floor Food Court)
+                        if (targetPos.x == -10 || targetPos.x == 4 || targetPos.x == 18)
+                        {
+                            rotY = 180.0f; // Facing North
+                        }
+                        else if (targetPos.x == -24)
+                        {
+                            rotY = -90.0f; // Facing West
+                        }
+                        else if (targetPos.x == 24)
+                        {
+                            rotY = 90.0f; // Facing East
+                        }
                     }
-                    else if (targetPos.x == -24)
+                    else if (pos.y > 5.0f)
                     {
-                        rotY = -90.0f; // Facing West
-                    }
-                    else if (targetPos.x == 24)
-                    {
-                        rotY = 90.0f; // Facing East
+                        // Face the shopkeeper perfectly (1st floor Shops)
+                        if (targetPos.x == -30 || targetPos.x == 30)
+                        {
+                            rotY = 180.0f;
+                        }
+                        else if (targetPos.x == -25)
+                        {
+                            rotY = -90.0f; // Facing West Wall
+                        }
+                        else if (targetPos.x == 25)
+                        {
+                            rotY = 90.0f; // Facing East Wall
+                        }
                     }
                 }
                 else if (state == HS_HEADING_TO_SEAT)
@@ -241,13 +277,13 @@ public:
                     else if (pos.y > 5.0f)
                     {
                         // Atrium benches
-                        if (targetPos.x == 0.0f && targetPos.z == -18.5f)
+                        if (targetPos.x == 0.0f && targetPos.z == -21.5f)
                             rotY = 0.0f;
-                        else if (targetPos.x == 0.0f && targetPos.z == -9.5f)
+                        else if (targetPos.x == 0.0f && targetPos.z == -6.5f)
                             rotY = 180.0f;
-                        else if (targetPos.x == -4.5f && targetPos.z == -14.0f)
+                        else if (targetPos.x == -7.5f && targetPos.z == -14.0f)
                             rotY = -90.0f;
-                        else if (targetPos.x == 4.5f && targetPos.z == -14.0f)
+                        else if (targetPos.x == 7.5f && targetPos.z == -14.0f)
                             rotY = 90.0f;
                     }
                 }

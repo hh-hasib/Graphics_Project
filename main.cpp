@@ -446,7 +446,8 @@ int main()
     
     // Create Atrium Fractal Tree
     atriumTree = new FractalTree();
-    atriumTree->generate(glm::vec3(0), 1.8f, 0.15f, 4, 16.0f);
+    // Made the tree wider, taller, with more branches (depth 5, angle 40)
+    atriumTree->generate(glm::vec3(0), 1.9f, 0.18f, 5, 40.0f);
 
     // Create Bezier arch for doorways
     bezierArch = new BezierArch();
@@ -503,7 +504,11 @@ int main()
     f1Shopkeepers.back().rotY = 0.0f;
     f1Shopkeepers.push_back(Human({30, f1Y, -33}, false, HS_SHOPKEEPER)); // Gems
     f1Shopkeepers.back().rotY = 0.0f;
-    for(int i=0; i<8; i++) {
+    f1Shopkeepers.push_back(Human({-33, f1Y, 0}, false, HS_SHOPKEEPER)); // Fashion
+    f1Shopkeepers.back().rotY = 90.0f;
+    f1Shopkeepers.push_back(Human({33, f1Y, 0}, true, HS_SHOPKEEPER)); // Tech
+    f1Shopkeepers.back().rotY = -90.0f;
+    for(int i=0; i<12; i++) { // Increased humans for 1st floor
         bool isFem = (rand()%2 == 0);
         float randX = -25.0f + (rand() % 500) / 10.0f;
         float randZ = -25.0f + (rand() % 400) / 10.0f;
@@ -1197,32 +1202,44 @@ void drawFirstFloorShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, g
     glm::mat4 m = glm::translate(pm, p);
     m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
 
+    // Make the shops 18 units wide (bigger as requested)
     // Back wall
-    drawCube(v, s, m, color, {0, 3.5f, -7.8f}, {12, 7, 0.4f});
+    drawCube(v, s, m, color, {0, 3.5f, -7.8f}, {18, 7, 0.4f});
     // Side walls
-    drawCube(v, s, m, color * 0.95f, {-5.8f, 3.5f, -3.8f}, {0.4f, 7, 8});
-    drawCube(v, s, m, color * 0.95f, {5.8f, 3.5f, -3.8f}, {0.4f, 7, 8});
+    drawCube(v, s, m, color * 0.95f, {-8.8f, 3.5f, -3.8f}, {0.4f, 7, 8});
+    drawCube(v, s, m, color * 0.95f, {8.8f, 3.5f, -3.8f}, {0.4f, 7, 8});
     
     // Front top facade
-    drawCube(v, s, m, color * 0.8f, {0, 6.5f, 0}, {12, 1.0f, 0.5f});
+    drawCube(v, s, m, color * 0.8f, {0, 6.5f, 0}, {18, 1.0f, 0.5f});
     
     // Counter
-    drawCube(v, s, m, glm::vec3(0.9f), {0, 0.5f, 0}, {10, 1, 1.5f});
+    drawCube(v, s, m, glm::vec3(0.9f), {0, 0.5f, 0}, {14, 1, 1.5f});
     
     // Theme details
     if (std::string(name) == "Bookstore") {
         for(int h=0; h<3; h++) {
-            drawCube(v, s, m, C_BOOKSHELF, {0, 1.5f + h*1.8f, -7.0f}, {11, 0.1f, 1.2f});
-            for(int b=0; b<10; b++) {
+            drawCube(v, s, m, C_BOOKSHELF, {0, 1.5f + h*1.8f, -7.0f}, {17, 0.1f, 1.2f});
+            for(int b=0; b<15; b++) {
                 glm::vec3 bCol = glm::vec3((b%3==0?0.8f:0.2f), (b%2==0?0.7f:0.3f), (b%5==0?0.9f:0.1f));
-                drawCube(v, s, m, bCol, {-5.0f + b*1.1f, 1.9f+h*1.8f, -7.0f}, {0.15f, 0.7f, 0.9f});
+                drawCube(v, s, m, bCol, {-7.5f + b*1.1f, 1.9f+h*1.8f, -7.0f}, {0.15f, 0.7f, 0.9f});
             }
         }
-    } else {
-        // Gems Shop
-        for(int i=0; i<3; i++) {
-            drawCube(v, s, m, glm::vec3(0.85f), {-3.0f + i*3.0f, 1.2f, 0}, {1.5f, 0.4f, 1.0f});
-            drawCube(v, s, m, C_MIRROR, {-3.0f + i*3.0f, 1.45f, 0}, {1.3f, 0.1f, 0.8f});
+    } else if (std::string(name) == "Gems") {
+        for(int i=0; i<5; i++) {
+            drawCube(v, s, m, glm::vec3(0.85f), {-6.0f + i*3.0f, 1.2f, 0}, {1.5f, 0.4f, 1.0f});
+            drawCube(v, s, m, C_MIRROR, {-6.0f + i*3.0f, 1.45f, 0}, {1.3f, 0.1f, 0.8f});
+        }
+    } else if (std::string(name) == "Fashion") {
+        // Clothing racks
+        for(int i=0; i<4; i++) {
+            drawCube(v, s, m, C_RACK, {-6.0f + i*4.0f, 1.8f, -4.0f}, {2.0f, 0.1f, 0.1f});
+            drawCube(v, s, m, color * 0.5f, {-6.0f + i*4.0f, 1.2f, -4.0f}, {1.8f, 1.2f, 0.1f});
+        }
+    } else if (std::string(name) == "Tech") {
+        // Tech display tables
+        for(int i=0; i<4; i++) {
+            drawCube(v, s, m, C_DISP_TABLE, {-6.0f + i*4.0f, 1.0f, -4.0f}, {2.0f, 0.2f, 1.5f});
+            drawCube(v, s, m, C_TECH_FLOOR, {-6.0f + i*4.0f, 1.2f, -4.0f}, {0.5f, 0.1f, 0.3f});
         }
     }
 }
@@ -1233,30 +1250,67 @@ void drawAtrium(unsigned int &v, Shader &s, glm::mat4 pm)
     glm::vec3 atriumCenter(0, f1Y, -14);
     glm::mat4 m = glm::translate(pm, atriumCenter);
 
-    // 1. Centerpiece: Fractal Tree
+    // 1. Centerpiece: Pink & Green Cherry Blossom Fractal Tree
     if(atriumTree) {
         atriumTree->drawBranches(s, m, texTreeBark, texturesEnabled);
-        atriumTree->drawLeaves(s, m, texTreeLeaf, texturesEnabled);
+        
+        // Draw 3 green overlapping spheres + 1 pink sphere per cluster
+        for (auto& lc : atriumTree->leafClusters) {
+            glm::mat4 leafM = glm::translate(m, lc.position);
+            float sz = lc.size * 0.85f; // scale factor
+            
+            // Random cherry blossom pink hues
+            float pR = 0.85f + (rand() % 15) * 0.01f;
+            float pG = 0.45f + (rand() % 15) * 0.01f;
+            float pB = 0.65f + (rand() % 15) * 0.01f;
+            
+            if (sphWheel) { 
+                // Green sphere 1 (Bottom Left)
+                glm::mat4 sm1 = glm::translate(leafM, glm::vec3(-0.25f*sz, -0.15f*sz, 0.15f*sz));
+                sm1 = glm::scale(sm1, glm::vec3(sz));
+                sphWheel->drawSphereWithColor(s, sm1, glm::vec3(0.2f, 0.6f, 0.2f), 16.0f);
+                
+                // Green sphere 2 (Bottom Right)
+                glm::mat4 sm2 = glm::translate(leafM, glm::vec3(0.2f*sz, -0.1f*sz, -0.15f*sz));
+                sm2 = glm::scale(sm2, glm::vec3(sz * 1.1f));
+                sphWheel->drawSphereWithColor(s, sm2, glm::vec3(0.18f, 0.55f, 0.18f), 16.0f);
+                
+                // Green sphere 3 (Bottom Center)
+                glm::mat4 sm3 = glm::translate(leafM, glm::vec3(0.05f*sz, -0.2f*sz, 0.2f*sz));
+                sm3 = glm::scale(sm3, glm::vec3(sz * 0.9f));
+                sphWheel->drawSphereWithColor(s, sm3, glm::vec3(0.22f, 0.68f, 0.25f), 16.0f);
+                
+                // Pink sphere (Top Center)
+                glm::mat4 sm4 = glm::translate(leafM, glm::vec3(0.0f, 0.2f*sz, 0.0f));
+                sm4 = glm::scale(sm4, glm::vec3(sz * 0.95f));
+                sphWheel->drawSphereWithColor(s, sm4, glm::vec3(pR, pG, pB), 16.0f);
+            } else {
+                leafM = glm::scale(leafM, glm::vec3(lc.size));
+                drawCube(v, s, leafM, glm::vec3(pR, pG, pB), {0,0,0}, {1,1,1}, 16.0f, 1.0f);
+            }
+        }
     }
     
-    // Planter base
-    drawCube(v, s, m, glm::vec3(0.2f), {0, 0.25f, 0}, {2.5f, 0.5f, 2.5f});
+    // Smaller Planter base (as requested)
+    drawCube(v, s, m, glm::vec3(0.2f), {0, 0.15f, 0}, {1.5f, 0.3f, 1.5f});
 
-    // 2. Benches
-    drawBench(v, s, m, {0, 0, -4.5f}, 0);
-    drawBench(v, s, m, {0, 0, 4.5f}, 180);
-    drawBench(v, s, m, {-4.5f, 0, 0}, -90);
-    drawBench(v, s, m, {4.5f, 0, 0}, 90);
+    // 2. Benches (Pushed further back due to larger atrium)
+    drawBench(v, s, m, {0, 0, -7.5f}, 0);
+    drawBench(v, s, m, {0, 0, 7.5f}, 180);
+    drawBench(v, s, m, {-7.5f, 0, 0}, -90);
+    drawBench(v, s, m, {7.5f, 0, 0}, 90);
 
-    // 3. Curved Glass Border (DRAW LAST FOR TRANSPARENCY)
+    // 3. Larger Curved Glass Border with 2 Entrances
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    int segments = 24;
-    float radius = 8.0f;
+    int segments = 36; // Increased segments for smoother large circle
+    float radius = 12.0f; // Larger atrium size
     for(int i=0; i<segments; i++) {
         float angle = (float)i / segments * 360.0f;
-        if (angle > 150 && angle < 210) continue; // ENTRANCE GAP
+        
+        // ENTRANCE GAPS (on 2 opposite sides)
+        if ((angle > 165 && angle < 195) || (angle > 345 || angle < 15)) continue; 
 
         float rad = glm::radians(angle);
         float px = radius * sin(rad);
@@ -1264,10 +1318,11 @@ void drawAtrium(unsigned int &v, Shader &s, glm::mat4 pm)
         
         glm::mat4 glassM = glm::translate(m, {px, 0.75f, pz});
         glassM = glm::rotate(glassM, rad, {0, 1, 0});
-        drawCube(v, s, glassM, C_GLASS, {0, 0, 0}, {2.2f, 1.5f, 0.1f}, 128, 0.3f);
+        // Wider arcs since we have more radius
+        drawCube(v, s, glassM, C_GLASS, {0, 0, 0}, {2.3f, 1.5f, 0.1f}, 128, 0.3f);
         // rails
-        drawCube(v, s, glassM, glm::vec3(0.8f), {0, 0.75f, 0}, {2.3f, 0.1f, 0.15f});
-        drawCube(v, s, glassM, glm::vec3(0.8f), {0, -0.75f, 0}, {2.3f, 0.1f, 0.15f});
+        drawCube(v, s, glassM, glm::vec3(0.8f), {0, 0.75f, 0}, {2.4f, 0.1f, 0.15f});
+        drawCube(v, s, glassM, glm::vec3(0.8f), {0, -0.75f, 0}, {2.4f, 0.1f, 0.15f});
     }
     glDisable(GL_BLEND);
 }
@@ -2072,11 +2127,15 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             // 1. Atrium & Benches
             drawAtrium(V, ls, I);
             
-            // 2. Retail Shops (NW & NE Corners)
+            // 2. Retail Shops
             // Bookstore at NW
             drawFirstFloorShop(V, ls, I, {-30, FLOOR_Y[1], -30}, C_BOOK_WALL, 0.0f, "Bookstore");
-            // Gems at NE (using Gem Wall color)
+            // Gems at NE
             drawFirstFloorShop(V, ls, I, {30, FLOOR_Y[1], -30}, C_GEM_WALL, 0.0f, "Gems");
+            // Fashion at West Wall
+            drawFirstFloorShop(V, ls, I, {-30, FLOOR_Y[1], 0}, C_FASH_WALL, 90.0f, "Fashion");
+            // Tech at East Wall
+            drawFirstFloorShop(V, ls, I, {30, FLOOR_Y[1], 0}, C_TECH_WALL, -90.0f, "Tech");
 
             // 3. 1st Floor Humans (Updating and Drawing)
             for(auto &h : f1Shopkeepers) {
