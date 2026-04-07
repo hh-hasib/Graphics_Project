@@ -10,6 +10,9 @@
 #include "sphere.h"
 #include "cylinder.h"
 #include "bezierCurve.h"
+#include <algorithm>
+
+extern std::vector<glm::vec3> g_occupiedTargets;
 
 extern void drawCube(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 c, glm::vec3 p, glm::vec3 sc, float sh, float a);
 
@@ -41,6 +44,10 @@ public:
     float walkCycle;
     bool isMoving;
     float speed;
+    bool hasOccupiedSeat;
+    float stuckTimer;
+    glm::vec3 benchFinalTarget;
+    bool hasBenchWaypoint;
 
     Human(glm::vec3 startPos, bool female, HumanState initState)
     {
@@ -48,9 +55,12 @@ public:
         isFemale = female;
         state = initState;
         rotY = 0.0f;
-        stateTimer = 0.0f;
         walkCycle = 0.0f;
         isMoving = false;
+        hasOccupiedSeat = false;
+        stuckTimer = 0.0f;
+        hasBenchWaypoint = false;
+        benchFinalTarget = glm::vec3(0);
         speed = 1.3f + ((rand() % 100) / 100.0f); // 1.3 to 2.3 units/sec
 
         // Skin Colors
@@ -76,13 +86,121 @@ public:
         }
     }
 
+    void releaseSeat()
+    {
+        if (hasOccupiedSeat)
+        {
+            // Try removing the actual targetPos
+            auto it = std::find(g_occupiedTargets.begin(), g_occupiedTargets.end(), targetPos);
+            if (it != g_occupiedTargets.end())
+                g_occupiedTargets.erase(it);
+            // Also try removing the benchFinalTarget (if we were en-route via waypoint)
+            auto it2 = std::find(g_occupiedTargets.begin(), g_occupiedTargets.end(), benchFinalTarget);
+            if (it2 != g_occupiedTargets.end())
+                g_occupiedTargets.erase(it2);
+            hasOccupiedSeat = false;
+        }
+        hasBenchWaypoint = false;
+    }
+
     void pickRandomTarget()
     {
-        // Bounds for open space in Food Court:
-        // Aisle around Z = -25
-        float tx = -18.0f + (rand() % 340) / 10.0f;
-        float tz = -26.0f + (rand() % 40) / 10.0f; // Strict open corridor
+        releaseSeat();
+        float tx, tz;
+        
+        if (pos.y > 10.0f) {
+            // 2nd floor food court
+            tx = -18.0f + (rand() % 360) / 10.0f;
+            tz = -26.0f + (rand() % 260) / 10.0f;
+        } else if (pos.y > 5.0f) {
+            // 1st floor - check if we're inside or outside the atrium ring
+            float myDx = pos.x;
+            float myDz = pos.z + 14.0f;
+            float myR = sqrt(myDx * myDx + myDz * myDz);
+            bool insideAtrium = (myR < 11.0f);
+            
+            if (insideAtrium) {
+                // Stay inside the ring - pick a point within radius 10
+                for (int attempt = 0; attempt < 20; attempt++) {
+                    tx = -9.0f + (rand() % 180) / 10.0f;  // -9 to 9
+                    tz = -23.0f + (rand() % 180) / 10.0f;  // -23 to -5
+                    float dr = sqrt(tx * tx + (tz + 14.0f) * (tz + 14.0f));
+                    if (dr > 2.0f && dr < 10.5f) break;
+                }
+            } else {
+                // Stay outside the ring - pick walkway points
+                for (int attempt = 0; attempt < 20; attempt++) {
+                    tx = -16.0f + (rand() % 320) / 10.0f;  // -16 to 16
+                    tz = -38.0f + (rand() % 700) / 10.0f;  // -38 to 32
+                    float dr = sqrt(tx * tx + (tz + 14.0f) * (tz + 14.0f));
+                    // Must be outside the ring AND not in escalator hole
+                    if (dr > 13.5f && !(tx > -5.5f && tx < 5.5f && tz > 9.5f && tz < 32.5f))
+                        break;
+                }
+            }
+        } else {
+            // Ground floor
+            tx = -35.0f + (rand() % 700) / 10.0f;
+            tz = -35.0f + (rand() % 700) / 10.0f;
+        }
+        
         targetPos = glm::vec3(tx, pos.y, tz);
+    }
+
+    bool checkCollision(glm::vec3 testPos)
+    {
+        if (testPos.y > 5.0f && testPos.y < 10.0f)
+        {
+            // Atrium Glass Ring and Tree
+            float dx = testPos.x;
+            float dz = testPos.z + 14.0f;
+            float r = sqrt(dx * dx + dz * dz);
+            
+            if (r < 2.5f) return true; // Tree planter collision (larger zone)
+            
+            // Bench collision zones (skip if heading to sit on a bench)
+            if (state != HS_HEADING_TO_SEAT && state != HS_SITTING)
+            {
+                // North bench at (0, -21.5)
+                if (abs(testPos.x) < 1.2f && abs(testPos.z - (-21.5f)) < 0.6f) return true;
+                // South bench at (0, -6.5)
+                if (abs(testPos.x) < 1.2f && abs(testPos.z - (-6.5f)) < 0.6f) return true;
+                // West bench at (-7.5, -14)
+                if (abs(testPos.x - (-7.5f)) < 0.6f && abs(testPos.z - (-14.0f)) < 1.2f) return true;
+                // East bench at (7.5, -14)
+                if (abs(testPos.x - 7.5f) < 0.6f && abs(testPos.z - (-14.0f)) < 1.2f) return true;
+            }
+            
+            // Glass ring is at radius 12.0f
+            if (r > 11.2f && r < 12.8f)
+            {
+                float deg = glm::degrees(atan2(dx, dz));
+                if (deg < 0) deg += 360.0f;
+                // Entrances are (160..200) and (340..360, 0..20)
+                if (!((deg > 155.0f && deg < 205.0f) || (deg > 335.0f || deg < 25.0f)))
+                {
+                    return true;
+                }
+            }
+            
+            // Shops (Customers completely stay in the main corridor)
+            if (testPos.x < -17.0f || testPos.x > 17.0f) return true;
+            
+            // Escalator hole south
+            if (testPos.x > -5.5f && testPos.x < 5.5f && testPos.z > 9.5f && testPos.z < 32.5f) return true;
+            
+            // Outer limits
+            if (testPos.x < -38.0f || testPos.x > 38.0f || testPos.z < -38.0f || testPos.z > 38.0f) return true;
+        }
+        else if (testPos.y > 10.0f)
+        {
+            if (testPos.x < -27.0f || testPos.x > 27.0f || testPos.z < -28.0f || testPos.z > 5.0f) return true;
+        }
+        else
+        {
+            if (testPos.x < -38.0f || testPos.x > 38.0f || testPos.z < -38.0f || testPos.z > 38.0f) return true;
+        }
+        return false;
     }
 
     void update(float dt)
@@ -97,6 +215,7 @@ public:
             stateTimer -= dt;
             if (stateTimer <= 0)
             {
+                releaseSeat();
                 state = HS_ROAMING;
                 // Determine reset height based on where they were sitting
                 float resetY = (pos.y < 5.0f) ? 0.0f : ((pos.y < 12.0f) ? 7.3f : 14.6f);
@@ -146,13 +265,13 @@ public:
                             // 1st floor shops
                             int s = rand() % 4;
                             if (s == 0)
-                                targetPos = glm::vec3(-30, pos.y, -20); // Bookstore
+                                targetPos = glm::vec3(-16, pos.y, -25); // Bookstore front
                             else if (s == 1)
-                                targetPos = glm::vec3(30, pos.y, -20); // Gems
+                                targetPos = glm::vec3(16, pos.y, -25); // Gems front
                             else if (s == 2)
-                                targetPos = glm::vec3(-25, pos.y, 0); // Fashion Target
+                                targetPos = glm::vec3(-16, pos.y, 5); // Clothing front
                             else if (s == 3)
-                                targetPos = glm::vec3(25, pos.y, 0); // Tech Target
+                                targetPos = glm::vec3(16, pos.y, 5); // Tech front
                         }
                         isMoving = true;
                     }
@@ -160,6 +279,7 @@ public:
                     {
                         // Sit down at a table group
                         state = HS_HEADING_TO_SEAT;
+                        bool seatHandled = false;
                         // Determine which floor we are on
                         if (pos.y > 10.0f)
                         {
@@ -186,32 +306,62 @@ public:
                         {
                             // 1st Floor Atrium Benches Logic
                             int benchIdx = rand() % 4;
-                            float bx = 0, bz = 0, rY = 0;
-                            if (benchIdx == 0)
+                            float bx = 0, bz = 0;
+                            if (benchIdx == 0) { bx = 0; bz = -21.5f; }
+                            else if (benchIdx == 1) { bx = 0; bz = -6.5f; }
+                            else if (benchIdx == 2) { bx = -7.5f; bz = -14.0f; }
+                            else if (benchIdx == 3) { bx = 7.5f; bz = -14.0f; }
+                            
+                            glm::vec3 benchTarget(bx, pos.y, bz);
+                            auto it = std::find(g_occupiedTargets.begin(), g_occupiedTargets.end(), benchTarget);
+                            if (it != g_occupiedTargets.end())
                             {
-                                bx = 0;
-                                bz = -21.5f;
-                                rY = 0;
-                            } // Adjusting to atrium center (0, -14) + offset
-                            else if (benchIdx == 1)
-                            {
-                                bx = 0;
-                                bz = -6.5f;
-                                rY = 180;
+                                // Already occupied, just roam instead
+                                state = HS_ROAMING;
+                                pickRandomTarget();
                             }
-                            else if (benchIdx == 2)
+                            else
                             {
-                                bx = -7.5f;
-                                bz = -14.0f;
-                                rY = -90;
+                                g_occupiedTargets.push_back(benchTarget);
+                                hasOccupiedSeat = true;
+                                
+                                // Check if we're already inside the atrium
+                                float myDx = pos.x;
+                                float myDz = pos.z + 14.0f;
+                                float myR = sqrt(myDx * myDx + myDz * myDz);
+                                
+                                if (myR < 11.0f) {
+                                    targetPos = benchTarget;
+                                    hasBenchWaypoint = false;
+                                } else {
+                                    // Route through nearest entrance first
+                                    float distToNorth = abs(pos.z - (-26.0f));
+                                    float distToSouth = abs(pos.z - (-2.0f));
+                                    if (distToNorth < distToSouth)
+                                        targetPos = glm::vec3(0, pos.y, -26.0f);
+                                    else
+                                        targetPos = glm::vec3(0, pos.y, -2.0f);
+                                    benchFinalTarget = benchTarget;
+                                    hasBenchWaypoint = true;
+                                }
                             }
-                            else if (benchIdx == 3)
+                            seatHandled = true;
+                        }
+
+                        // Check if seat is occupied (for 2nd floor only)
+                        if (!seatHandled)
+                        {
+                            auto it = std::find(g_occupiedTargets.begin(), g_occupiedTargets.end(), targetPos);
+                            if (it != g_occupiedTargets.end())
                             {
-                                bx = 7.5f;
-                                bz = -14.0f;
-                                rY = 90;
+                                state = HS_ROAMING;
+                                pickRandomTarget();
                             }
-                            targetPos = glm::vec3(bx, pos.y, bz);
+                            else
+                            {
+                                g_occupiedTargets.push_back(targetPos);
+                                hasOccupiedSeat = true;
+                            }
                         }
                         isMoving = true;
                     }
@@ -247,15 +397,11 @@ public:
                     else if (pos.y > 5.0f)
                     {
                         // Face the shopkeeper perfectly (1st floor Shops)
-                        if (targetPos.x == -30 || targetPos.x == 30)
-                        {
-                            rotY = 180.0f;
-                        }
-                        else if (targetPos.x == -25)
+                        if (targetPos.x == -16)
                         {
                             rotY = -90.0f; // Facing West Wall
                         }
-                        else if (targetPos.x == 25)
+                        else if (targetPos.x == 16)
                         {
                             rotY = 90.0f; // Facing East Wall
                         }
@@ -263,62 +409,98 @@ public:
                 }
                 else if (state == HS_HEADING_TO_SEAT)
                 {
-                    state = HS_SITTING;
-                    stateTimer = 30.0f + (rand() % 60); // Sit 30-90 sec
-                    walkCycle = 0.0f;                   // Stop walking animation
-
-                    if (pos.y > 10.0f)
+                    // Check if this was a waypoint (entrance) arrival for 1st floor bench
+                    if (hasBenchWaypoint && pos.y > 5.0f && pos.y < 10.0f)
                     {
-                        // Face the table center
-                        float tableX = std::round((targetPos.x + 18.0f) / 8.0f) * 8.0f - 18.0f;
-                        float tableZ = std::round((targetPos.z + 16.0f) / 9.0f) * 9.0f - 16.0f;
-                        rotY = glm::degrees(atan2(tableX - targetPos.x, tableZ - targetPos.z));
+                        // We arrived at the entrance, now head to the actual bench
+                        targetPos = benchFinalTarget;
+                        hasBenchWaypoint = false;
+                        isMoving = true;
                     }
-                    else if (pos.y > 5.0f)
+                    else
                     {
-                        // Atrium benches
-                        if (targetPos.x == 0.0f && targetPos.z == -21.5f)
-                            rotY = 0.0f;
-                        else if (targetPos.x == 0.0f && targetPos.z == -6.5f)
-                            rotY = 180.0f;
-                        else if (targetPos.x == -7.5f && targetPos.z == -14.0f)
-                            rotY = -90.0f;
-                        else if (targetPos.x == 7.5f && targetPos.z == -14.0f)
-                            rotY = 90.0f;
+                        state = HS_SITTING;
+                        stateTimer = 30.0f + (rand() % 60); // Sit 30-90 sec
+                        walkCycle = 0.0f;                   // Stop walking animation
+
+                        if (pos.y > 10.0f)
+                        {
+                            // Face the table center
+                            float tableX = std::round((targetPos.x + 18.0f) / 8.0f) * 8.0f - 18.0f;
+                            float tableZ = std::round((targetPos.z + 16.0f) / 9.0f) * 9.0f - 16.0f;
+                            rotY = glm::degrees(atan2(tableX - targetPos.x, tableZ - targetPos.z));
+                        }
+                        else if (pos.y > 5.0f)
+                        {
+                            // Atrium benches - hardcoded rotY matching bench orientation
+                            // Bench backrest is at local -Z, person faces local +Z
+                            if (targetPos.z < -20.0f) // North bench (0, -21.5)
+                                rotY = 0.0f;  // bench rot=0, face +Z toward tree
+                            else if (targetPos.z > -8.0f) // South bench (0, -6.5)
+                                rotY = 180.0f; // bench rot=180, face -Z toward tree
+                            else if (targetPos.x < -5.0f) // West bench (-7.5, -14)
+                                rotY = -90.0f; // bench rot=-90, face +X toward tree
+                            else // East bench (7.5, -14)
+                                rotY = 90.0f; // bench rot=90, face -X toward tree
+                        }
                     }
                 }
             }
             else
             {
                 dir = glm::normalize(dir);
-                pos += dir * speed * dt;
-
-                // Keep bounding box tight just in case
-                if (pos.y > 10.0f)
-                { // 2nd floor
-                    if (pos.x < -27.0f)
-                        pos.x = -27.0f;
-                    if (pos.x > 27.0f)
-                        pos.x = 27.0f;
-                    if (pos.z < -28.0f)
-                        pos.z = -28.0f;
-                    if (pos.z > 5.0f)
-                        pos.z = 5.0f;
+                float stepX = dir.x * speed * dt;
+                float stepZ = dir.z * speed * dt;
+                
+                glm::vec3 nextX = pos + glm::vec3(stepX, 0, 0);
+                glm::vec3 nextZ = glm::vec3(pos.x, pos.y, pos.z + stepZ);
+                
+                bool movedX = false, movedZ = false;
+                if (!checkCollision(nextX))
+                {
+                    pos.x = nextX.x;
+                    movedX = true;
                 }
-                else if (pos.y > 5.0f)
-                { // 1st floor
-                    if (pos.x < -35.0f)
-                        pos.x = -35.0f;
-                    if (pos.x > 35.0f)
-                        pos.x = 35.0f;
-                    if (pos.z < -35.0f)
-                        pos.z = -35.0f;
-                    if (pos.z > 35.0f)
-                        pos.z = 35.0f;
+                if (!checkCollision(nextZ))
+                {
+                    pos.z = nextZ.z;
+                    movedZ = true;
                 }
-
-                rotY = glm::degrees(atan2(dir.x, dir.z));
-                walkCycle += dt * 8.0f;
+                
+                if (movedX || movedZ)
+                {
+                    stuckTimer = 0.0f;
+                    rotY = glm::degrees(atan2(dir.x, dir.z));
+                    walkCycle += dt * 8.0f;
+                }
+                else
+                {
+                    // Not moving at all - stop walk animation immediately
+                    walkCycle = 0.0f;
+                    stuckTimer += dt;
+                    
+                    if (stuckTimer > 0.5f)
+                    {
+                        // Push away from obstacle and pick new target
+                        stuckTimer = 0.0f;
+                        releaseSeat();
+                        state = HS_ROAMING;
+                        
+                        // Push backward (opposite of facing direction)
+                        float pushDist = 1.5f;
+                        float rad = glm::radians(rotY);
+                        float pushX = pos.x - sin(rad) * pushDist;
+                        float pushZ = pos.z - cos(rad) * pushDist;
+                        glm::vec3 pushPos(pushX, pos.y, pushZ);
+                        if (!checkCollision(pushPos))
+                        {
+                            pos.x = pushX;
+                            pos.z = pushZ;
+                        }
+                        
+                        pickRandomTarget();
+                    }
+                }
             }
         }
     }

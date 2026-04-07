@@ -19,6 +19,9 @@
 #include <vector>
 #include "cylinder.h"
 #include "human.h"
+
+std::vector<glm::vec3> g_occupiedTargets;
+
 using namespace std;
 
 // ---- Forward Declarations ----
@@ -44,7 +47,7 @@ void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm);
 // 1st Floor Atrium and Retail Space
 void drawBench(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, float roty);
 void drawAtrium(unsigned int &v, Shader &s, glm::mat4 pm);
-void drawFirstFloorShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color, float roty, const char* name);
+void drawFirstFloorShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color, float roty, const char *name);
 
 // Settings
 unsigned int SCR_WIDTH = 1400, SCR_HEIGHT = 900;
@@ -87,7 +90,7 @@ const glm::vec3 C_BARRIER_R(0.90f, 0.15f, 0.10f);
 const glm::vec3 C_FLOOR(0.82f, 0.78f, 0.72f); // mall floor
 const glm::vec3 C_CEILING(0.93f, 0.91f, 0.89f);
 const glm::vec3 C_CORR(0.85f, 0.83f, 0.78f); // corridor wall
-const glm::vec3 C_WOOD(0.5f, 0.35f, 0.2f); // wood furniture
+const glm::vec3 C_WOOD(0.5f, 0.35f, 0.2f);   // wood furniture
 // Fashion shop - PINK walls (from reference)
 const glm::vec3 C_FASH_WALL(0.95f, 0.68f, 0.72f);
 const glm::vec3 C_FASH_FLOOR(0.78f, 0.65f, 0.55f);
@@ -225,9 +228,11 @@ float prayerDoorOffset = 0.0f; // 0=closed, 1=open
 
 // Texture IDs
 unsigned int texCubeVAO = 0;
-unsigned int texFloor = 0, texFashion = 0, texTech = 0, texGems = 0, texFood = 0, texTreeLeaf = 0, texTreeBark = 0, texGrass = 0;
+unsigned int texFloor = 0, texFashion_GF = 0, texTech_GF = 0, texCloth = 0, texElectronic = 0, texGems = 0, texFood = 0;
+unsigned int texTreeLeaf = 0, texTreeBark = 0, texGrass = 0;
 unsigned int texKitkat = 0, texMovie = 0, texIceCream = 0, texCoke = 0, texColdDrink = 0;
 unsigned int texBiriyani = 0, texCake = 0, texCoffee = 0, texMcdonalds = 0, texPizza = 0, texWood = 0, texPrayerTiles = 0, texMahrib = 0;
+unsigned int texBookShop = 0;
 
 // Spheres
 Sphere *sphWheel = nullptr;
@@ -253,7 +258,7 @@ std::vector<Human> f1Patrons;
 std::vector<Human> f1Shopkeepers;
 
 // 1st Floor Atrium Tree
-FractalTree* atriumTree = nullptr;
+FractalTree *atriumTree = nullptr;
 
 // Cylinder
 Cylinder *cylinderObj = nullptr;
@@ -363,9 +368,12 @@ int main()
     // Load Textures
     stbi_set_flip_vertically_on_load(true);
     texFloor = loadTexture("floor_tiles_texture.jpg");
-    texFashion = loadTexture("fashion_shop.png");
-    texTech = loadTexture("tech_shop.png");
-    texGems = loadTexture("gems_shop.jpg");
+    texFashion_GF = loadTexture("fashion_shop.png");
+    texTech_GF = loadTexture("tech_shop.png");
+    texCloth = loadTexture("cloth.jpg");
+    texElectronic = loadTexture("electronic.png");
+    texGems = loadTexture("gems.jpg");
+    texBookShop = loadTexture("book.jpg");
     texFood = loadTexture("food_court.png");
     texTreeLeaf = loadTexture("tree_leaves_texture.png");
     texTreeBark = loadTexture("tree_texture.jpg");
@@ -443,7 +451,7 @@ int main()
         };
         bezierTable->generate(tableProfile, 12, 16);
     }
-    
+
     // Create Atrium Fractal Tree
     atriumTree = new FractalTree();
     // Made the tree wider, taller, with more branches (depth 5, angle 40)
@@ -473,15 +481,14 @@ int main()
             {0.5f, 0.3f, 0.0f},
             {0.6f, 0.0f, 0.0f},
             {0.65f, -0.3f, 0.0f},
-            {0.5f, -0.7f, 0.0f}
-        };
+            {0.5f, -0.7f, 0.0f}};
         hairSurface->generate(hairProfile, 16, 16);
     }
-    
+
     // Initialize Humans
     float fY = FLOOR_Y[2];
     shopkeepers.push_back(Human({-10, fY, -33}, false, HS_SHOPKEEPER)); // McDonald's
-    shopkeepers.back().rotY = 0.0f; 
+    shopkeepers.back().rotY = 0.0f;
     shopkeepers.push_back(Human({4, fY, -33}, true, HS_SHOPKEEPER)); // Biriyani
     shopkeepers.back().rotY = 0.0f;
     shopkeepers.push_back(Human({18, fY, -33}, false, HS_SHOPKEEPER)); // Pizza
@@ -491,25 +498,52 @@ int main()
     shopkeepers.push_back(Human({28, fY, -15}, false, HS_SHOPKEEPER)); // Coffee
     shopkeepers.back().rotY = -90.0f;
 
-    for(int i=0; i<25; i++) {
-        bool isFem = (rand()%2 == 0);
+    for (int i = 0; i < 12; i++)
+    {
+        bool isFem = (rand() % 2 == 0);
         float randX = -20.0f + (rand() % 400) / 10.0f;
         float randZ = -25.0f + (rand() % 200) / 10.0f;
         patrons.push_back(Human({randX, fY, randZ}, isFem, HS_ROAMING));
     }
-    
+
     // 1st Floor Humans
     float f1Y = FLOOR_Y[1];
-    f1Shopkeepers.push_back(Human({-30, f1Y, -33}, true, HS_SHOPKEEPER)); // Bookstore
+
+    // Bookstore
+    f1Shopkeepers.push_back(Human({-30, f1Y, -33}, true, HS_SHOPKEEPER));
     f1Shopkeepers.back().rotY = 0.0f;
-    f1Shopkeepers.push_back(Human({30, f1Y, -33}, false, HS_SHOPKEEPER)); // Gems
+    f1Shopkeepers.push_back(Human({-25, f1Y, -33}, false, HS_SHOPKEEPER));
     f1Shopkeepers.back().rotY = 0.0f;
-    f1Shopkeepers.push_back(Human({-33, f1Y, 0}, false, HS_SHOPKEEPER)); // Fashion
+    f1Shopkeepers.push_back(Human({-35, f1Y, -33}, true, HS_SHOPKEEPER));
+    f1Shopkeepers.back().rotY = 0.0f;
+
+    // Gems
+    f1Shopkeepers.push_back(Human({30, f1Y, -33}, false, HS_SHOPKEEPER));
+    f1Shopkeepers.back().rotY = 0.0f;
+    f1Shopkeepers.push_back(Human({25, f1Y, -33}, true, HS_SHOPKEEPER));
+    f1Shopkeepers.back().rotY = 0.0f;
+    f1Shopkeepers.push_back(Human({35, f1Y, -33}, false, HS_SHOPKEEPER));
+    f1Shopkeepers.back().rotY = 0.0f;
+
+    // Fashion
+    f1Shopkeepers.push_back(Human({-33, f1Y, 0}, false, HS_SHOPKEEPER));
     f1Shopkeepers.back().rotY = 90.0f;
-    f1Shopkeepers.push_back(Human({33, f1Y, 0}, true, HS_SHOPKEEPER)); // Tech
+    f1Shopkeepers.push_back(Human({-33, f1Y, -5}, true, HS_SHOPKEEPER));
+    f1Shopkeepers.back().rotY = 90.0f;
+    f1Shopkeepers.push_back(Human({-33, f1Y, 5}, false, HS_SHOPKEEPER));
+    f1Shopkeepers.back().rotY = 90.0f;
+
+    // Tech
+    f1Shopkeepers.push_back(Human({33, f1Y, 0}, true, HS_SHOPKEEPER));
     f1Shopkeepers.back().rotY = -90.0f;
-    for(int i=0; i<12; i++) { // Increased humans for 1st floor
-        bool isFem = (rand()%2 == 0);
+    f1Shopkeepers.push_back(Human({33, f1Y, -5}, false, HS_SHOPKEEPER));
+    f1Shopkeepers.back().rotY = -90.0f;
+    f1Shopkeepers.push_back(Human({33, f1Y, 5}, true, HS_SHOPKEEPER));
+    f1Shopkeepers.back().rotY = -90.0f;
+
+    for (int i = 0; i < 6; i++)
+    { // Reduced humans for 1st floor
+        bool isFem = (rand() % 2 == 0);
         float randX = -25.0f + (rand() % 500) / 10.0f;
         float randZ = -25.0f + (rand() % 400) / 10.0f;
         f1Patrons.push_back(Human({randX, f1Y, randZ}, isFem, HS_ROAMING));
@@ -827,11 +861,15 @@ unsigned int loadTexture(const char *path)
     if (data)
     {
         GLenum fmt;
-        if (ch == 1) fmt = GL_RED;
-        else if (ch == 3) fmt = GL_RGB;
-        else if (ch == 4) fmt = GL_RGBA;
-        else fmt = GL_RGB;
-        
+        if (ch == 1)
+            fmt = GL_RED;
+        else if (ch == 3)
+            fmt = GL_RGB;
+        else if (ch == 4)
+            fmt = GL_RGBA;
+        else
+            fmt = GL_RGB;
+
         glBindTexture(GL_TEXTURE_2D, id);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexImage2D(GL_TEXTURE_2D, 0, fmt, w, h, 0, fmt, GL_UNSIGNED_BYTE, data);
@@ -925,16 +963,16 @@ void drawFoodShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::ve
 {
     glm::mat4 m = glm::translate(pm, p);
     m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
-    
+
     // Front counter
     drawCubeTextured(texCubeVAO, s, m, glm::vec3(0.9f), {0, 0.45f, 0}, {12.0f, 0.9f, 2.0f}, texWood, 1.0f, 32.0f);
     drawCube(v, s, m, color, {0, 0.9f, 0}, {12.2f, 0.1f, 2.2f}); // Counter top
-    
+
     // Back wall
     drawCubeProcShop(v, s, m, color * 0.8f, {0, 3.5f, -9.8f}, {12.0f, 7.0f, 0.4f});
     // Poster on the back wall
     drawCubeTextured(texCubeVAO, s, m, glm::vec3(1.0f), {0, 3.5f, -9.58f}, {10.0f, 6.0f, 0.04f}, shopTex, 1.0f, 32.0f);
-    
+
     // Side walls
     drawCubeProcShop(v, s, m, color * 0.9f, {-5.8f, 3.5f, -4.8f}, {0.4f, 7.0f, 9.6f});
     drawCubeProcShop(v, s, m, color * 0.9f, {5.8f, 3.5f, -4.8f}, {0.4f, 7.0f, 9.6f});
@@ -950,10 +988,13 @@ void drawFoodShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::ve
     drawCube(v, s, m, C_WOOD, {4.6f, 5.0f, -6.0f}, {2.0f, 0.1f, 4.0f}); // rack 3
 
     // Items on right racks (Cans)
-    if(cylinderObj) {
-        for(int cy = 0; cy < 3; cy++) {
+    if (cylinderObj)
+    {
+        for (int cy = 0; cy < 3; cy++)
+        {
             float ry = 2.2f + cy * 1.5f;
-            for(int cx = 0; cx < 4; cx++) {
+            for (int cx = 0; cx < 4; cx++)
+            {
                 glm::mat4 canM = glm::translate(m, {4.6f, ry, -7.0f + cx * 0.6f});
                 canM = glm::scale(canM, glm::vec3(0.3f, 0.4f, 0.3f));
                 cylinderObj->draw(s, canM, glm::vec3(1.0f), shopTex, 1.0f);
@@ -963,8 +1004,8 @@ void drawFoodShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::ve
 
     // Cash Register on counter (Right side)
     drawCube(v, s, m, glm::vec3(0.1f), {3.0f, 1.25f, 0.5f}, {1.0f, 0.6f, 0.8f}); // base
-    drawCube(v, s, m, glm::vec3(0.3f), {3.0f, 1.6f, 0.6f}, {0.8f, 0.5f, 0.1f}); // screen
-    
+    drawCube(v, s, m, glm::vec3(0.3f), {3.0f, 1.6f, 0.6f}, {0.8f, 0.5f, 0.1f});  // screen
+
     // Coffee Maker / Machine (Left side)
     drawCube(v, s, m, glm::vec3(0.05f), {-3.5f, 1.4f, 0.5f}, {1.5f, 0.9f, 1.0f}); // machine body
     drawCube(v, s, m, glm::vec3(0.6f), {-3.5f, 1.15f, 0.5f}, {0.9f, 0.4f, 0.8f}); // tray
@@ -978,17 +1019,17 @@ void drawChair(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, float roty
 {
     glm::mat4 m = glm::translate(pm, p);
     m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
-    
+
     // Seat
     drawCube(v, s, m, C_CHAIR, {0, 0.5f, 0}, {0.6f, 0.05f, 0.6f});
-    
+
     // Legs
     float lOff = 0.25f;
     drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.25f, -lOff}, {0.05f, 0.5f, 0.05f});
     drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.25f, -lOff}, {0.05f, 0.5f, 0.05f});
     drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.25f, lOff}, {0.05f, 0.5f, 0.05f});
     drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.25f, lOff}, {0.05f, 0.5f, 0.05f});
-    
+
     // Backrest (rear legs extended, local +Z is "back")
     drawCube(v, s, m, C_CHAIR * 0.6f, {-lOff, 0.75f, lOff}, {0.05f, 0.5f, 0.05f});
     drawCube(v, s, m, C_CHAIR * 0.6f, {lOff, 0.75f, lOff}, {0.05f, 0.5f, 0.05f});
@@ -998,45 +1039,50 @@ void drawChair(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, float roty
 void drawDiningSet(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p)
 {
     glm::mat4 m = glm::translate(pm, p);
-    
+
     // Central Table leg
     drawCube(v, s, m, C_TABLE * 0.6f, {0, 0.45f, 0}, {0.2f, 0.9f, 0.2f});
     drawCube(v, s, m, C_TABLE * 0.5f, {0, 0.02f, 0}, {0.8f, 0.04f, 0.8f}); // Base plate
 
     // Table top using bezierTable
-    if (bezierTable != nullptr) {
+    if (bezierTable != nullptr)
+    {
         glm::mat4 tm = glm::translate(m, {0, 0.9f, 0});
-        tm = glm::scale(tm, glm::vec3(2.0f, 1.0f, 2.0f)); 
+        tm = glm::scale(tm, glm::vec3(2.0f, 1.0f, 2.0f));
         bezierTable->draw(s, tm, C_TABLE);
-    } else {
+    }
+    else
+    {
         drawCube(v, s, m, C_TABLE, {0, 0.9f, 0}, {2.2f, 0.05f, 2.2f});
     }
 
     // 4 Chairs arranged radially
-    drawChair(v, s, m, {0, 0, 1.4f}, 0);     // South chair (faces North)
-    drawChair(v, s, m, {0, 0, -1.4f}, 180);  // North chair (faces South)
-    drawChair(v, s, m, {-1.4f, 0, 0}, -90);  // West chair (faces East)
-    drawChair(v, s, m, {1.4f, 0, 0}, 90);    // East chair (faces West)
+    drawChair(v, s, m, {0, 0, 1.4f}, 0);    // South chair (faces North)
+    drawChair(v, s, m, {0, 0, -1.4f}, 180); // North chair (faces South)
+    drawChair(v, s, m, {-1.4f, 0, 0}, -90); // West chair (faces East)
+    drawChair(v, s, m, {1.4f, 0, 0}, 90);   // East chair (faces West)
 }
 
 void drawWashroom(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p)
 {
     glm::mat4 m = glm::translate(pm, p);
     drawCube(v, s, m, C_WASH, {0, 0.03f, 0}, {14.0f, 0.04f, 18.0f}); // floor
-    
+
     // East wall (X = 7.0)
     drawCube(v, s, m, C_WASH * 0.95f, {7.0f, 3.5f, -1.0f}, {0.3f, 7.0f, 20.0f});
     // South wall (Z = 9.0) with a door gap in the middle
-    drawCube(v, s, m, C_WASH * 0.95f, {-3.5f, 3.5f, 9.0f}, {7.0f, 7.0f, 0.3f});  // left of door
-    drawCube(v, s, m, C_WASH * 0.95f, {5.5f, 3.5f, 9.0f}, {3.0f, 7.0f, 0.3f});   // right of door
+    drawCube(v, s, m, C_WASH * 0.95f, {-3.5f, 3.5f, 9.0f}, {7.0f, 7.0f, 0.3f}); // left of door
+    drawCube(v, s, m, C_WASH * 0.95f, {5.5f, 3.5f, 9.0f}, {3.0f, 7.0f, 0.3f});  // right of door
     // Door header
     drawCube(v, s, m, C_WASH * 0.95f, {2.0f, 5.5f, 9.0f}, {4.0f, 3.0f, 0.3f});
-    
+
     // Inside partitions for stalls
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++)
+    {
         float px = -5.0f + i * 3.5f;
         drawCube(v, s, m, C_WASH * 0.88f, {px, 2.0f, -6.0f}, {0.1f, 4.0f, 6.0f});
-        if (i < 3) {
+        if (i < 3)
+        {
             drawCube(v, s, m, C_WASH * 0.85f, {px + 1.75f, 2.0f, -3.0f}, {3.4f, 3.8f, 0.1f}); // door
         }
     }
@@ -1052,19 +1098,19 @@ void drawIceCreamFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm:
 {
     glm::mat4 m = glm::translate(pm, p);
     m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
-    
+
     // Base unit
     drawCube(v, s, m, glm::vec3(0.85f), {0, 0.6f, 0}, {4.0f, 1.2f, 2.0f});
     // Curved/slanted glass front approximation using an angled transparent cube
     glm::mat4 g = glm::translate(m, {0, 1.5f, 0.2f});
     g = glm::rotate(g, glm::radians(-25.0f), {1, 0, 0});
-    
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDepthMask(GL_FALSE);
-    
+
     drawCube(v, s, g, C_GLASS, {0, 0, 0}, {4.0f, 1.2f, 0.05f}, 128, 0.3f);
-    
+
     // Glass sides and top
     drawCube(v, s, m, C_GLASS, {-1.95f, 1.6f, -0.4f}, {0.05f, 1.0f, 1.2f}, 128, 0.3f);
     drawCube(v, s, m, C_GLASS, {1.95f, 1.6f, -0.4f}, {0.05f, 1.0f, 1.2f}, 128, 0.3f);
@@ -1081,7 +1127,7 @@ void drawDrinksFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm::m
 {
     glm::mat4 m = glm::translate(pm, p);
     m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
-    
+
     // Main body (Hollowed out)
     // Back wall
     drawCube(v, s, m, glm::vec3(0.1f), {0, 1.5f, -0.9f}, {3.0f, 3.0f, 0.2f});
@@ -1100,13 +1146,16 @@ void drawDrinksFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm::m
     drawCube(v, s, m, glm::vec3(0.05f), {0, 1.5f, 1.03f}, {0.1f, 2.9f, 0.05f});
 
     // Populate interior shelves with bottles/cans using Cylinder
-    for(int sh = 0; sh < 4; sh++) {
+    for (int sh = 0; sh < 4; sh++)
+    {
         float shy = 0.5f + sh * 0.6f;
         drawCube(v, s, m, glm::vec3(0.8f), {0, shy, 0.5f}, {2.8f, 0.05f, 0.8f}); // shelf
-        
+
         // Add cans if cylinderObj exists
-        if(cylinderObj) {
-            for(int cx = 0; cx < 4; cx++) {
+        if (cylinderObj)
+        {
+            for (int cx = 0; cx < 4; cx++)
+            {
                 glm::mat4 canM = glm::translate(m, {-1.0f + cx * 0.6f, shy + 0.15f, 0.6f});
                 canM = glm::scale(canM, glm::vec3(0.2f, 0.3f, 0.2f));
                 cylinderObj->draw(s, canM, glm::vec3(1.0f), texCoke, 1.0f);
@@ -1129,22 +1178,23 @@ void drawDrinksFreezer(unsigned int &v, unsigned int &texCube, Shader &s, glm::m
 void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm)
 {
     float fY = FLOOR_Y[2];
-    
+
     // 1. Washroom (NW Corner: Center at X = -31, Z = -29)
     drawWashroom(v, s, pm, {-31.0f, fY, -29.0f});
-    
+
     glm::vec3 stallColors[5] = {C_STALL_RED, C_STALL_YEL, C_STALL_GRN, C_STALL_ORG, C_STALL_PUR};
     unsigned int shopTextures[5] = {texMcdonalds, texBiriyani, texPizza, texCake, texCoffee};
-    
+
     // 2. Food Shops (3 sides: North, East, West)
     // --- North Wall (Facing South, Z = -28 bounding to -38) ---
     // Place 3 stalls strictly between washroom edge (X = -24) and East wall edge (X = 38).
     // Width points: X = -12, X = 4, X = 20.
-    for(int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++)
+    {
         float sx = -10.0f + i * 14.0f;
         drawFoodShop(v, s, pm, {sx, fY, -28.0f}, stallColors[i], 0.0f, shopTextures[i]);
     }
-    
+
     // --- West Wall (Facing East, X = -28 bounding to -38) ---
     // Placed south of Washroom (which ends at Z = -20).
     // Available free West wall: Z = -18 to Z = 5. We'll place 1 stall at Z=-8.
@@ -1160,20 +1210,25 @@ void drawFoodCourt(unsigned int &v, Shader &s, glm::mat4 pm)
 
     // 3. Dining Sets (Center Area)
     // Grid bounded to X: -20 to 16, Z: -18 to 2
-    for(int r = 0; r < 3; r++) {
-        for(int c = 0; c < 5; c++) {
+    for (int r = 0; r < 3; r++)
+    {
+        for (int c = 0; c < 5; c++)
+        {
             float dx = -18.0f + c * 8.0f;
             float dz = -16.0f + r * 9.0f;
-            if (c == 2 && r == 1) continue; // skip center
+            if (c == 2 && r == 1)
+                continue; // skip center
             drawDiningSet(v, s, pm, {dx, fY, dz});
         }
     }
 
     // Process and Draw Humans
-    for(auto &h : shopkeepers) {
+    for (auto &h : shopkeepers)
+    {
         h.draw(v, s, pm, sphWheel, hairSurface, cylinderObj);
     }
-    for(auto &h : patrons) {
+    for (auto &h : patrons)
+    {
         h.update(deltaTime);
         h.draw(v, s, pm, sphWheel, hairSurface, cylinderObj);
     }
@@ -1197,49 +1252,142 @@ void drawBench(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, float roty
     drawCube(v, s, m, C_WOOD, {0, 0.8f, -0.35f}, {2.0f, 0.6f, 0.1f});
 }
 
-void drawFirstFloorShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color, float roty, const char* name)
+void drawFirstFloorShop(unsigned int &v, Shader &s, glm::mat4 pm, glm::vec3 p, glm::vec3 color, float roty, const char *name, float width, float depth)
 {
     glm::mat4 m = glm::translate(pm, p);
     m = glm::rotate(m, glm::radians(roty), {0, 1, 0});
 
-    // Make the shops 18 units wide (bigger as requested)
-    // Back wall
-    drawCube(v, s, m, color, {0, 3.5f, -7.8f}, {18, 7, 0.4f});
-    // Side walls
-    drawCube(v, s, m, color * 0.95f, {-8.8f, 3.5f, -3.8f}, {0.4f, 7, 8});
-    drawCube(v, s, m, color * 0.95f, {8.8f, 3.5f, -3.8f}, {0.4f, 7, 8});
-    
-    // Front top facade
-    drawCube(v, s, m, color * 0.8f, {0, 6.5f, 0}, {18, 1.0f, 0.5f});
-    
-    // Counter
-    drawCube(v, s, m, glm::vec3(0.9f), {0, 0.5f, 0}, {14, 1, 1.5f});
-    
+    // Apply texture based on shop name
+    unsigned int activeTex = texCubeVAO; // dummy fallback
+    if (std::string(name) == "Bookstore")
+        activeTex = texBookShop;
+    else if (std::string(name) == "Clothing")
+        activeTex = texCloth;
+    else if (std::string(name) == "Gems")
+        activeTex = texGems;
+    else if (std::string(name) == "Electronic")
+        activeTex = texElectronic;
+
+    float halfW = width / 2.0f;
+    float backZ = -depth;
+    float wallT = 0.4f;
+
+    // Back wall (Textured)
+    if (texturesEnabled && activeTex != 0 && activeTex != texCubeVAO)
+    {
+        drawCubeTextured(texCubeVAO, s, m, color, {0, 3.5f, backZ + wallT / 2}, {width, 7, wallT}, activeTex, 1.0f);
+    }
+    else
+    {
+        drawCube(v, s, m, color, {0, 3.5f, backZ + wallT / 2}, {width, 7, wallT});
+    }
+
+    // Side walls (Procedurally textured)
+    drawCubeProcShop(v, s, m, color * 0.95f, {-halfW + wallT / 2, 3.5f, backZ / 2}, {wallT, 7, depth});
+    drawCubeProcShop(v, s, m, color * 0.95f, {halfW - wallT / 2, 3.5f, backZ / 2}, {wallT, 7, depth});
+
+    // Front top facade (Textured with shop pattern)
+    if (texturesEnabled && activeTex != 0 && activeTex != texCubeVAO)
+    {
+        drawCubeTextured(texCubeVAO, s, m, color * 0.8f, {0, 6.5f, -0.5f}, {width, 1.0f, 1.0f}, activeTex, 1.0f);
+    }
+    else
+    {
+        drawCube(v, s, m, color * 0.8f, {0, 6.5f, -0.5f}, {width, 1.0f, 1.0f});
+    }
+
+    // Completely Open Front (No Glass Windows)
+
+    // Counter (Wooden Texture) acting as a front barrier
+    float counterZ = -1.0f; // Placed right at the front, just slightly inside
+    if (texturesEnabled)
+    {
+        drawCubeTextured(texCubeVAO, s, m, glm::vec3(0.9f), {0, 0.5f, counterZ}, {width * 0.7f, 1, 1.5f}, texWood, 4.0f);
+    }
+    else
+    {
+        drawCube(v, s, m, glm::vec3(0.9f), {0, 0.5f, counterZ}, {width * 0.7f, 1, 1.5f});
+    }
+
     // Theme details
-    if (std::string(name) == "Bookstore") {
-        for(int h=0; h<3; h++) {
-            drawCube(v, s, m, C_BOOKSHELF, {0, 1.5f + h*1.8f, -7.0f}, {17, 0.1f, 1.2f});
-            for(int b=0; b<15; b++) {
-                glm::vec3 bCol = glm::vec3((b%3==0?0.8f:0.2f), (b%2==0?0.7f:0.3f), (b%5==0?0.9f:0.1f));
-                drawCube(v, s, m, bCol, {-7.5f + b*1.1f, 1.9f+h*1.8f, -7.0f}, {0.15f, 0.7f, 0.9f});
+    if (std::string(name) == "Bookstore")
+    {
+        for (int h = 0; h < 3; h++)
+        {
+            drawCube(v, s, m, C_BOOKSHELF, {0, 1.5f + h * 1.8f, backZ + 1.0f}, {width - 2.0f, 0.1f, 1.2f});
+            for (int b = 0; b < 20; b++)
+            {
+                glm::vec3 bCol = glm::vec3((b % 3 == 0 ? 0.8f : 0.2f), (b % 2 == 0 ? 0.7f : 0.3f), (b % 5 == 0 ? 0.9f : 0.1f));
+                drawCube(v, s, m, bCol, {-halfW + 2.0f + b * (width / 24.0f), 1.9f + h * 1.8f, backZ + 1.0f}, {0.15f, 0.7f, 0.9f});
+                // Add some books on the counter (which is now at the front)
+                if (h == 0 && b < 8)
+                {
+                    drawCube(v, s, m, bCol, {-width * 0.25f + b * 1.5f, 1.2f, counterZ}, {0.6f, 0.2f, 0.8f});
+                }
             }
         }
-    } else if (std::string(name) == "Gems") {
-        for(int i=0; i<5; i++) {
-            drawCube(v, s, m, glm::vec3(0.85f), {-6.0f + i*3.0f, 1.2f, 0}, {1.5f, 0.4f, 1.0f});
-            drawCube(v, s, m, C_MIRROR, {-6.0f + i*3.0f, 1.45f, 0}, {1.3f, 0.1f, 0.8f});
+    }
+    else if (std::string(name) == "Gems")
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            float posX = -halfW + 3.0f + i * (width / 6.5f);
+            drawCube(v, s, m, glm::vec3(0.85f), {posX, 1.2f, backZ * 0.4f}, {1.5f, 0.4f, 1.0f});
+            drawCube(v, s, m, C_MIRROR, {posX, 1.45f, backZ * 0.4f}, {1.3f, 0.1f, 0.8f});
+            // Necklaces on wall
+            drawCube(v, s, m, glm::vec3(0.9f, 0.8f, 0.2f), {posX, 3.5f, backZ + 0.5f}, {0.4f, 0.8f, 0.1f});
         }
-    } else if (std::string(name) == "Fashion") {
+        // Small displays on the front counter barrier
+        for (int i = 0; i < 5; i++)
+        {
+             drawCube(v, s, m, C_GEM_CASE, {-width * 0.25f + i * 2.5f, 1.2f, counterZ}, {1.5f, 0.2f, 0.8f});
+             drawCube(v, s, m, glm::vec3(0.9f, 0.2f, 0.2f), {-width * 0.25f + i * 2.5f, 1.35f, counterZ}, {0.2f, 0.2f, 0.2f});
+        }
+    }
+    else if (std::string(name) == "Clothing")
+    {
         // Clothing racks
-        for(int i=0; i<4; i++) {
-            drawCube(v, s, m, C_RACK, {-6.0f + i*4.0f, 1.8f, -4.0f}, {2.0f, 0.1f, 0.1f});
-            drawCube(v, s, m, color * 0.5f, {-6.0f + i*4.0f, 1.2f, -4.0f}, {1.8f, 1.2f, 0.1f});
+        for (int i = 0; i < 5; i++)
+        {
+            float posX = -halfW + 3.0f + i * (width / 5.5f);
+            drawCube(v, s, m, C_RACK, {posX, 1.8f, backZ * 0.6f}, {2.0f, 0.1f, 0.1f});
+            // Hanging dresses
+            for (int d = 0; d < 3; d++)
+            {
+                glm::vec3 dCol = glm::vec3((d % 2 == 0 ? 0.9 : 0.1), (i % 2 == 0 ? 0.2 : 0.7), (d + i) % 3 == 0 ? 0.8 : 0.3);
+                drawCube(v, s, m, dCol, {posX - 0.6f + d * 0.6f, 1.2f, backZ * 0.6f}, {0.5f, 1.1f, 0.3f});
+            }
         }
-    } else if (std::string(name) == "Tech") {
+        // Folded clothes on the front counter barrier
+        for (int i = 0; i < 5; i++)
+        {
+            glm::vec3 cCol1 = glm::vec3(0.8f, 0.3f, 0.3f);
+            glm::vec3 cCol2 = glm::vec3(0.2f, 0.4f, 0.8f);
+            drawCube(v, s, m, cCol1, {-width * 0.25f + i * 2.0f, 1.1f, counterZ}, {0.8f, 0.2f, 0.8f});
+            drawCube(v, s, m, cCol2, {-width * 0.25f + i * 2.0f, 1.3f, counterZ}, {0.8f, 0.2f, 0.8f});
+        }
+    }
+    else if (std::string(name) == "Electronic")
+    {
         // Tech display tables
-        for(int i=0; i<4; i++) {
-            drawCube(v, s, m, C_DISP_TABLE, {-6.0f + i*4.0f, 1.0f, -4.0f}, {2.0f, 0.2f, 1.5f});
-            drawCube(v, s, m, C_TECH_FLOOR, {-6.0f + i*4.0f, 1.2f, -4.0f}, {0.5f, 0.1f, 0.3f});
+        for (int i = 0; i < 5; i++)
+        {
+            float posX = -halfW + 3.0f + i * (width / 5.5f);
+            drawCube(v, s, m, C_DISP_TABLE, {posX, 1.0f, backZ * 0.6f}, {2.5f, 0.2f, 2.0f});
+            drawCube(v, s, m, C_TECH_FLOOR, {posX, 1.2f, backZ * 0.6f}, {0.5f, 0.1f, 0.3f});
+
+            // Laptops & Phones on display
+            drawCube(v, s, m, glm::vec3(0.8f), {posX - 0.5f, 1.3f, backZ * 0.6f - 0.2f}, {0.6f, 0.05f, 0.6f});  // laptop base
+            drawCube(v, s, m, glm::vec3(0.1f), {posX - 0.5f, 1.55f, backZ * 0.6f - 0.4f}, {0.6f, 0.5f, 0.05f}); // screen
+
+            drawCube(v, s, m, glm::vec3(0.1f), {posX + 0.5f, 1.28f, backZ * 0.6f + 0.2f}, {0.2f, 0.05f, 0.4f}); // phone
+        }
+        
+        // Displays on the front counter barrier
+        for (int i = 0; i < 4; i++)
+        {
+             drawCube(v, s, m, glm::vec3(0.8f), {-width * 0.2f + i * 3.0f, 1.1f, counterZ}, {0.6f, 0.05f, 0.6f});  // laptop base
+             drawCube(v, s, m, glm::vec3(0.1f), {-width * 0.2f + i * 3.0f, 1.35f, counterZ - 0.2f}, {0.6f, 0.5f, 0.05f}); // screen
         }
     }
 }
@@ -1251,46 +1399,51 @@ void drawAtrium(unsigned int &v, Shader &s, glm::mat4 pm)
     glm::mat4 m = glm::translate(pm, atriumCenter);
 
     // 1. Centerpiece: Pink & Green Cherry Blossom Fractal Tree
-    if(atriumTree) {
+    if (atriumTree)
+    {
         atriumTree->drawBranches(s, m, texTreeBark, texturesEnabled);
-        
+
         // Draw 3 green overlapping spheres + 1 pink sphere per cluster
-        for (auto& lc : atriumTree->leafClusters) {
+        for (auto &lc : atriumTree->leafClusters)
+        {
             glm::mat4 leafM = glm::translate(m, lc.position);
             float sz = lc.size * 0.85f; // scale factor
-            
+
             // Random cherry blossom pink hues
             float pR = 0.85f + (rand() % 15) * 0.01f;
             float pG = 0.45f + (rand() % 15) * 0.01f;
             float pB = 0.65f + (rand() % 15) * 0.01f;
-            
-            if (sphWheel) { 
+
+            if (sphWheel)
+            {
                 // Green sphere 1 (Bottom Left)
-                glm::mat4 sm1 = glm::translate(leafM, glm::vec3(-0.25f*sz, -0.15f*sz, 0.15f*sz));
+                glm::mat4 sm1 = glm::translate(leafM, glm::vec3(-0.25f * sz, -0.15f * sz, 0.15f * sz));
                 sm1 = glm::scale(sm1, glm::vec3(sz));
                 sphWheel->drawSphereWithColor(s, sm1, glm::vec3(0.2f, 0.6f, 0.2f), 16.0f);
-                
+
                 // Green sphere 2 (Bottom Right)
-                glm::mat4 sm2 = glm::translate(leafM, glm::vec3(0.2f*sz, -0.1f*sz, -0.15f*sz));
+                glm::mat4 sm2 = glm::translate(leafM, glm::vec3(0.2f * sz, -0.1f * sz, -0.15f * sz));
                 sm2 = glm::scale(sm2, glm::vec3(sz * 1.1f));
                 sphWheel->drawSphereWithColor(s, sm2, glm::vec3(0.18f, 0.55f, 0.18f), 16.0f);
-                
+
                 // Green sphere 3 (Bottom Center)
-                glm::mat4 sm3 = glm::translate(leafM, glm::vec3(0.05f*sz, -0.2f*sz, 0.2f*sz));
+                glm::mat4 sm3 = glm::translate(leafM, glm::vec3(0.05f * sz, -0.2f * sz, 0.2f * sz));
                 sm3 = glm::scale(sm3, glm::vec3(sz * 0.9f));
                 sphWheel->drawSphereWithColor(s, sm3, glm::vec3(0.22f, 0.68f, 0.25f), 16.0f);
-                
+
                 // Pink sphere (Top Center)
-                glm::mat4 sm4 = glm::translate(leafM, glm::vec3(0.0f, 0.2f*sz, 0.0f));
+                glm::mat4 sm4 = glm::translate(leafM, glm::vec3(0.0f, 0.2f * sz, 0.0f));
                 sm4 = glm::scale(sm4, glm::vec3(sz * 0.95f));
                 sphWheel->drawSphereWithColor(s, sm4, glm::vec3(pR, pG, pB), 16.0f);
-            } else {
+            }
+            else
+            {
                 leafM = glm::scale(leafM, glm::vec3(lc.size));
-                drawCube(v, s, leafM, glm::vec3(pR, pG, pB), {0,0,0}, {1,1,1}, 16.0f, 1.0f);
+                drawCube(v, s, leafM, glm::vec3(pR, pG, pB), {0, 0, 0}, {1, 1, 1}, 16.0f, 1.0f);
             }
         }
     }
-    
+
     // Smaller Planter base (as requested)
     drawCube(v, s, m, glm::vec3(0.2f), {0, 0.15f, 0}, {1.5f, 0.3f, 1.5f});
 
@@ -1303,19 +1456,21 @@ void drawAtrium(unsigned int &v, Shader &s, glm::mat4 pm)
     // 3. Larger Curved Glass Border with 2 Entrances
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    int segments = 36; // Increased segments for smoother large circle
+
+    int segments = 36;    // Increased segments for smoother large circle
     float radius = 12.0f; // Larger atrium size
-    for(int i=0; i<segments; i++) {
+    for (int i = 0; i < segments; i++)
+    {
         float angle = (float)i / segments * 360.0f;
-        
+
         // ENTRANCE GAPS (on 2 opposite sides)
-        if ((angle > 165 && angle < 195) || (angle > 345 || angle < 15)) continue; 
+        if ((angle > 165 && angle < 195) || (angle > 345 || angle < 15))
+            continue;
 
         float rad = glm::radians(angle);
         float px = radius * sin(rad);
         float pz = radius * cos(rad);
-        
+
         glm::mat4 glassM = glm::translate(m, {px, 0.75f, pz});
         glassM = glm::rotate(glassM, rad, {0, 1, 0});
         // Wider arcs since we have more radius
@@ -1602,7 +1757,6 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {38.0f, fy, 25}, {4.0f, SLAB, 30}, texFloor, 8, 32, .9f);
         }
         ls.setBool("blendWithColor", false);
-
     }
 
     // Ceilings for each floor
@@ -1612,10 +1766,10 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         if (fl == 2)
         {
             // Roof with only the stair hole for 2->Roof (X:24..36, Z:22..26)
-            drawCube(V, ls, I, C_CEILING, {-8.0f, cy, 0}, {64.0f, .15f, 80.0f}); // West: X:-40..24
+            drawCube(V, ls, I, C_CEILING, {-8.0f, cy, 0}, {64.0f, .15f, 80.0f});     // West: X:-40..24
             drawCube(V, ls, I, C_CEILING, {30.0f, cy, -9.0f}, {12.0f, .15f, 62.0f}); // North: Z:-40..22 (X:24..36)
             drawCube(V, ls, I, C_CEILING, {30.0f, cy, 33.0f}, {12.0f, .15f, 14.0f}); // South: Z:26..40 (X:24..36)
-            drawCube(V, ls, I, C_CEILING, {38.0f, cy, 0}, {4.0f, .15f, 80.0f}); // East: X:36..40
+            drawCube(V, ls, I, C_CEILING, {38.0f, cy, 0}, {4.0f, .15f, 80.0f});      // East: X:36..40
         }
         else if (fl == 0)
         {
@@ -1676,11 +1830,11 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             float pitch = atan2(esRise, esLen);
             float hypot = sqrt(esRise * esRise + esLen * esLen);
             glm::mat4 panelM = glm::translate(I, {0, esRise / 2.0f, esCenterZ});
-            
+
             glm::mat4 leftPanelM = glm::translate(panelM, {esX - esW / 2, 0.5f, 0});
             leftPanelM = glm::rotate(leftPanelM, pitch, {1, 0, 0});
             drawCube(V, ls, leftPanelM, C_GLASS, {0, 0, 0}, {.08f, 1.2f, hypot + 2.0f}, 128, .2f);
-            
+
             glm::mat4 rightPanelM = glm::translate(panelM, {esX + esW / 2, 0.5f, 0});
             rightPanelM = glm::rotate(rightPanelM, pitch, {1, 0, 0});
             drawCube(V, ls, rightPanelM, C_GLASS, {0, 0, 0}, {.08f, 1.2f, hypot + 2.0f}, 128, .2f);
@@ -1688,7 +1842,7 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             // Handrails
             glm::mat4 leftRailM = glm::translate(leftPanelM, {0, 0.6f, 0});
             drawCube(V, ls, leftRailM, C_TIRE, {0, 0, 0}, {.12f, .06f, hypot + 2.0f});
-            
+
             glm::mat4 rightRailM = glm::translate(rightPanelM, {0, 0.6f, 0});
             drawCube(V, ls, rightRailM, C_TIRE, {0, 0, 0}, {.12f, .06f, hypot + 2.0f});
 
@@ -1704,11 +1858,12 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             {
                 float rawT = (float)i / numSteps;
                 float currentT = fmod(rawT + (dir * escalatorOffset * 0.1f), 1.0f);
-                if (currentT < 0) currentT += 1.0f;
+                if (currentT < 0)
+                    currentT += 1.0f;
 
                 float sZ = esBottomZ - currentT * esLen;
                 float sY = currentT * esRise;
-                
+
                 // Flat part of the step
                 drawCube(V, ls, I, C_STAIR * 1.05f, {esX, sY + .05f, sZ}, {esW - .4f, .1f, stepZ * 1.0f});
                 // Vertical part of the step (riser)
@@ -1802,9 +1957,9 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
     // ============================================================
     {
         int ns = 14;
-        float stW = 4.0f; // Width of stairs in Z
+        float stW = 4.0f;           // Width of stairs in Z
         float stepRun = 10.0f / ns; // X length = 10 (24 to 34)
-        
+
         // Flight G→1: Starts at X=24, ends at X=34. Moves +X (East). Z = 24.
         for (int i = 0; i < ns; i++)
         {
@@ -1826,7 +1981,7 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         drawCube(V, ls, I, C_STAIR, {23.0f, FLOOR_Y[2] - .15f, 28.0f}, {2.0f, SLAB, stW});
 
         // Open staircases (Railings)
-        
+
         // Vertical Posts
         drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[1] / 2 + 1, 22.0f}, {.08f, FLOOR_Y[1] + 2, .08f}); // start post G->1
         drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[1] / 2 + 1, 22.0f}, {.08f, FLOOR_Y[1] + 2, .08f}); // end post G->1
@@ -1847,10 +2002,10 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         drawCube(V, ls, m2, C_LAMP, {0, 0, 0}, {12.5f, .06f, .06f}); // right rail G->1
 
         glm::mat4 m3 = glm::translate(I, {29.0f, FLOOR_Y[1] + FLOOR_H / 2 + 1.2f, 26.05f});
-        m3 = glm::rotate(m3, atan2(-FLOOR_Y[1], 10.0f), {0, 0, 1}); 
+        m3 = glm::rotate(m3, atan2(-FLOOR_Y[1], 10.0f), {0, 0, 1});
         drawCube(V, ls, m3, C_LAMP, {0, 0, 0}, {12.5f, .06f, .06f}); // left rail 1->2
         glm::mat4 m4 = glm::translate(I, {29.0f, FLOOR_Y[1] + FLOOR_H / 2 + 1.2f, 29.95f});
-        m4 = glm::rotate(m4, atan2(-FLOOR_Y[1], 10.0f), {0, 0, 1}); 
+        m4 = glm::rotate(m4, atan2(-FLOOR_Y[1], 10.0f), {0, 0, 1});
         drawCube(V, ls, m4, C_LAMP, {0, 0, 0}, {12.5f, .06f, .06f}); // right rail 1->2
 
         // Flight 2→Roof: Starts at X=24, ends at X=34. Moves +X (East). Z = 24.
@@ -1864,8 +2019,8 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         drawCube(V, ls, I, C_STAIR, {35.0f, CEIL_Y[2] - .15f, 26.0f}, {2.0f, SLAB, stW * 2});
 
         // Vertical Posts for 2->Roof
-        drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 22.0f}, {.08f, FLOOR_H + 2, .08f}); 
-        drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 22.0f}, {.08f, FLOOR_H + 2, .08f}); 
+        drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 22.0f}, {.08f, FLOOR_H + 2, .08f});
+        drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 22.0f}, {.08f, FLOOR_H + 2, .08f});
         drawCube(V, ls, I, C_LAMP, {24.5f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 26.0f}, {.08f, FLOOR_H + 2, .08f});
         drawCube(V, ls, I, C_LAMP, {34.0f, FLOOR_Y[2] + FLOOR_H / 2 + 1, 26.0f}, {.08f, FLOOR_H + 2, .08f});
 
@@ -1883,28 +2038,28 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
     // ============================================================
     {
         float bY = CEIL_Y[2]; // Base Y
-        float sH = 3.5f; // Shed Height
-        float wT = 0.2f; // Wall thickness
-        
+        float sH = 3.5f;      // Shed Height
+        float wT = 0.2f;      // Wall thickness
+
         // West Wall (solid behind stairs)
-        drawCube(V, ls, I, C_EXT, {23.9f, bY + sH/2, 24.0f}, {wT, sH, 4.4f});
-        
+        drawCube(V, ls, I, C_EXT, {23.9f, bY + sH / 2, 24.0f}, {wT, sH, 4.4f});
+
         // North Wall (solid with glass insert)
-        drawCube(V, ls, I, C_EXT, {30.0f, bY + sH/2, 21.9f}, {12.0f, sH, wT});
+        drawCube(V, ls, I, C_EXT, {30.0f, bY + sH / 2, 21.9f}, {12.0f, sH, wT});
         // South Wall (solid with glass insert)
-        drawCube(V, ls, I, C_EXT, {30.0f, bY + sH/2, 26.1f}, {12.0f, sH, wT});
+        drawCube(V, ls, I, C_EXT, {30.0f, bY + sH / 2, 26.1f}, {12.0f, sH, wT});
 
         // East Face (Open doorway frames)
-        drawCube(V, ls, I, C_EXT, {36.1f, bY + sH/2, 21.9f}, {wT, sH, wT}); // NE Pillar
-        drawCube(V, ls, I, C_EXT, {36.1f, bY + sH/2, 26.1f}, {wT, sH, wT}); // SE Pillar
+        drawCube(V, ls, I, C_EXT, {36.1f, bY + sH / 2, 21.9f}, {wT, sH, wT});        // NE Pillar
+        drawCube(V, ls, I, C_EXT, {36.1f, bY + sH / 2, 26.1f}, {wT, sH, wT});        // SE Pillar
         drawCube(V, ls, I, C_EXT, {36.1f, bY + sH - 0.4f, 24.0f}, {wT, 0.8f, 4.4f}); // Top Header
 
         // Roof Slab (Slight overhang)
         drawCube(V, ls, I, C_EXT * 0.8f, {30.0f, bY + sH + 0.1f, 24.0f}, {12.8f, 0.2f, 4.8f});
 
         // Glass panel inserts for North/South walls
-        drawCube(V, ls, I, C_GLASS, {30.0f, bY + sH/2, 21.9f}, {8.0f, 2.0f, wT + 0.05f}, 128, 0.4f);
-        drawCube(V, ls, I, C_GLASS, {30.0f, bY + sH/2, 26.1f}, {8.0f, 2.0f, wT + 0.05f}, 128, 0.4f);
+        drawCube(V, ls, I, C_GLASS, {30.0f, bY + sH / 2, 21.9f}, {8.0f, 2.0f, wT + 0.05f}, 128, 0.4f);
+        drawCube(V, ls, I, C_GLASS, {30.0f, bY + sH / 2, 26.1f}, {8.0f, 2.0f, wT + 0.05f}, 128, 0.4f);
     }
 
     // ============================================================
@@ -1934,7 +2089,7 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCube(V, ls, I, C_GLASS, {cx - 4, glassH / 2, -10}, {6, glassH, .08f}, 128, .3f);
             drawCube(V, ls, I, C_GLASS, {cx + 4, glassH / 2, -10}, {6, glassH, .08f}, 128, .3f);
             // Banner
-            drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {cx, FLOOR_H - .5f, -10.1f}, {14, 1.5f, .12f}, texTech, 1, 16);
+            drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {cx, FLOOR_H - .5f, -10.1f}, {14, 1.5f, .12f}, texTech_GF, 1, 16);
             // Display tables (tech products)
             for (int r = 0; r < 2; r++)
                 for (int c = 0; c < 3; c++)
@@ -1967,7 +2122,7 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCube(V, ls, I, C_GLASS, {cx - 4, glassH / 2, -10}, {6, glassH, .08f}, 128, .3f);
             drawCube(V, ls, I, C_GLASS, {cx + 4, glassH / 2, -10}, {6, glassH, .08f}, 128, .3f);
             // Banner
-            drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {cx, FLOOR_H - .5f, -10.1f}, {14, 1.5f, .12f}, texFashion, 1, 16);
+            drawCubeTextured(texCubeVAO, ls, I, glm::vec3(.95f), {cx, FLOOR_H - .5f, -10.1f}, {14, 1.5f, .12f}, texFashion_GF, 1, 16);
             // Clothing racks and mannequins
             for (int r = 0; r < 3; r++)
             {
@@ -1997,15 +2152,15 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         ls.setBool("blendWithColor", false);
 
         // Walls (X:-10..10, Z:-20..-8)
-        drawCube(V, ls, I, C_PRAY_WALL, {0, FLOOR_H / 2, -19.9f}, {20, FLOOR_H, 0.2f}); // Back wall
+        drawCube(V, ls, I, C_PRAY_WALL, {0, FLOOR_H / 2, -19.9f}, {20, FLOOR_H, 0.2f});  // Back wall
         drawCube(V, ls, I, C_PRAY_WALL, {-9.9f, FLOOR_H / 2, -14}, {0.2f, FLOOR_H, 12}); // Left wall
         drawCube(V, ls, I, C_PRAY_WALL, {9.9f, FLOOR_H / 2, -14}, {0.2f, FLOOR_H, 12});  // Right wall
-        
+
         // Front wall with glass door gap
         drawCube(V, ls, I, C_PRAY_WALL, {-7.5f, FLOOR_H / 2, -8.1f}, {5, FLOOR_H, 0.2f}); // Left of door
         drawCube(V, ls, I, C_PRAY_WALL, {7.5f, FLOOR_H / 2, -8.1f}, {5, FLOOR_H, 0.2f});  // Right of door
-        drawCube(V, ls, I, C_PRAY_WALL, {0, FLOOR_H - 1.0f, -8.1f}, {10, 2.0f, 0.2f}); // Above door
-        
+        drawCube(V, ls, I, C_PRAY_WALL, {0, FLOOR_H - 1.0f, -8.1f}, {10, 2.0f, 0.2f});    // Above door
+
         // Glass Doors (Double doors sliding)
         {
             float doorW = 4.8f;
@@ -2013,30 +2168,32 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glDepthMask(GL_FALSE);
-            
+
             drawCube(V, ls, I, C_GLASS, {-2.5f - slide, (FLOOR_H - 2.0f) / 2, -8.1f}, {doorW, FLOOR_H - 2.0f, 0.1f}, 128, 0.4f);
             drawCube(V, ls, I, C_GLASS, {2.5f + slide, (FLOOR_H - 2.0f) / 2, -8.1f}, {doorW, FLOOR_H - 2.0f, 0.1f}, 128, 0.4f);
-            
+
             glDepthMask(GL_TRUE);
             glDisable(GL_BLEND);
         }
-        
-        // Mihrab Decoration on back wall 
+
+        // Mihrab Decoration on back wall
         // 1. Arch outline
-        if (bezierArch) {
+        if (bezierArch)
+        {
             glm::mat4 mArch = glm::translate(I, {0, 0, -19.6f});
             mArch = glm::scale(mArch, {2.5f, 1.5f, 1.0f});
             bezierArch->draw(ls, mArch, glm::vec3(0.95f, 0.90f, 0.75f), 16.0f);
             ls.setBool("useTexture", true); // Reset if needed
         }
-        
+
         // 2. Circular Calligraphy Frame (flattened cylinder)
-        if (cylinderObj) {
+        if (cylinderObj)
+        {
             glm::mat4 mCyl = glm::translate(I, {0, 3.5f, -19.7f});
             mCyl = glm::rotate(mCyl, glm::radians(90.0f), {1.0f, 0.0f, 0.0f});
             mCyl = glm::scale(mCyl, {1.5f, 0.1f, 1.5f});
             cylinderObj->draw(ls, mCyl, glm::vec3(0.15f, 0.15f, 0.15f));
-            
+
             // Gold border
             mCyl = glm::translate(I, {0, 3.5f, -19.75f});
             mCyl = glm::rotate(mCyl, glm::radians(90.0f), {1.0f, 0.0f, 0.0f});
@@ -2045,7 +2202,8 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         }
 
         // 3. Flanking textured columns
-        for (int side = -1; side <= 1; side += 2) {
+        for (int side = -1; side <= 1; side += 2)
+        {
             float sx = side * 5.0f;
             ls.setBool("blendWithColor", true);
             // Split column into two 3x3 cubes to prevent vertical stretching of the square aspect ratio texture
@@ -2053,13 +2211,13 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             drawCubeTextured(texCubeVAO, ls, I, glm::vec3(1.0f), {sx, 4.5f, -19.6f}, {3.0f, 3.0f, 0.6f}, texMahrib, 1.0f, 32, 1.0f); // Top half
             ls.setBool("blendWithColor", false);
         }
-        
+
         // 4. Quran Stand (Rehal) - X shape
         ls.setBool("blendWithColor", true);
         glm::mat4 mR1 = glm::translate(I, {0, 0.6f, -17.0f});
         mR1 = glm::rotate(mR1, glm::radians(45.0f), {0.0f, 0.0f, 1.0f});
         drawCubeTextured(texCubeVAO, ls, mR1, C_WOOD, {0, 0, 0}, {0.1f, 1.2f, 1.0f}, texWood, 1.0f, 64, 1.0f);
-        
+
         glm::mat4 mR2 = glm::translate(I, {0, 0.6f, -17.0f});
         mR2 = glm::rotate(mR2, glm::radians(-45.0f), {0.0f, 0.0f, 1.0f});
         drawCubeTextured(texCubeVAO, ls, mR2, C_WOOD, {0, 0, 0}, {0.1f, 1.2f, 1.0f}, texWood, 1.0f, 64, 1.0f);
@@ -2126,22 +2284,30 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         {
             // 1. Atrium & Benches
             drawAtrium(V, ls, I);
-            
+
             // 2. Retail Shops
-            // Bookstore at NW
-            drawFirstFloorShop(V, ls, I, {-30, FLOOR_Y[1], -30}, C_BOOK_WALL, 0.0f, "Bookstore");
-            // Gems at NE
-            drawFirstFloorShop(V, ls, I, {30, FLOOR_Y[1], -30}, C_GEM_WALL, 0.0f, "Gems");
-            // Fashion at West Wall
-            drawFirstFloorShop(V, ls, I, {-30, FLOOR_Y[1], 0}, C_FASH_WALL, 90.0f, "Fashion");
-            // Tech at East Wall
-            drawFirstFloorShop(V, ls, I, {30, FLOOR_Y[1], 0}, C_TECH_WALL, -90.0f, "Tech");
+            // All positioned to face the central corridor / atrium gap
+            // Corridors widened by moving shops back to X = ±18. Depth = 22 completely spans to X = ±40.
+            
+            // BookStore: Faces EAST (+X). Center X=-18. Spans Z=-38 to -12 (Width 26), touches X=-40.
+            drawFirstFloorShop(V, ls, I, {-18.0f, FLOOR_Y[1], -25.0f}, C_BOOK_WALL, 90.0f, "Bookstore", 26.0f, 22.0f);
+            
+            // Gems: Faces WEST (-X). Center X=18. Spans Z=-38 to -12 (Width 26), touches X=40.
+            drawFirstFloorShop(V, ls, I, {18.0f, FLOOR_Y[1], -25.0f}, C_GEM_WALL, -90.0f, "Gems", 26.0f, 22.0f);
+            
+            // Clothing: Faces EAST (+X). Center X=-18. Spans Z=-8 to 18 (Width 26), touches X=-40.
+            drawFirstFloorShop(V, ls, I, {-18.0f, FLOOR_Y[1], 5.0f}, C_FASH_WALL, 90.0f, "Clothing", 26.0f, 22.0f);
+            
+            // Electronic: Faces WEST (-X). Center X=18. Spans Z=-8 to 18 (Width 26), touches X=40.
+            drawFirstFloorShop(V, ls, I, {18.0f, FLOOR_Y[1], 5.0f}, C_TECH_WALL, -90.0f, "Electronic", 26.0f, 22.0f);
 
             // 3. 1st Floor Humans (Updating and Drawing)
-            for(auto &h : f1Shopkeepers) {
+            for (auto &h : f1Shopkeepers)
+            {
                 h.draw(V, ls, I, sphWheel, hairSurface, cylinderObj);
             }
-            for(auto &h : f1Patrons) {
+            for (auto &h : f1Patrons)
+            {
                 h.update(deltaTime);
                 h.draw(V, ls, I, sphWheel, hairSurface, cylinderObj);
             }
@@ -2261,16 +2427,19 @@ void processInput(GLFWwindow *w)
     {
         // On escalator: automatically move Z
         // 18 units in 5 seconds = 3.6 units/sec * escalatorDir
-        float esSpeed = 3.6f * deltaTime * escalatorDir; 
-        if (x > 0.f) {
+        float esSpeed = 3.6f * deltaTime * escalatorDir;
+        if (x > 0.f)
+        {
             // Right escalator: UP (Z goes towards 12)
             basic_camera.eye.z -= esSpeed;
-        } else {
+        }
+        else
+        {
             // Left escalator: DOWN (Z goes towards 30)
             basic_camera.eye.z += esSpeed;
         }
         z = basic_camera.eye.z;
-        
+
         // Z=30 (near entrance) = ground level, Z=12 (far end) = 1st floor level
         float t = (30.f - z) / 18.0f;
         t = glm::clamp(t, 0.f, 1.f);
