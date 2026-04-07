@@ -218,7 +218,7 @@ float entranceDoorOffset = 0.0f; // 0=closed, 1=open
 unsigned int texCubeVAO = 0;
 unsigned int texFloor = 0, texFashion = 0, texTech = 0, texGems = 0, texFood = 0, texTreeLeaf = 0, texTreeBark = 0, texGrass = 0;
 unsigned int texKitkat = 0, texMovie = 0, texIceCream = 0, texCoke = 0, texColdDrink = 0;
-unsigned int texBiriyani = 0, texCake = 0, texCoffee = 0, texMcdonalds = 0, texPizza = 0, texWood = 0;
+unsigned int texBiriyani = 0, texCake = 0, texCoffee = 0, texMcdonalds = 0, texPizza = 0, texWood = 0, texPrayerTiles = 0, texMahrib = 0;
 
 // Spheres
 Sphere *sphWheel = nullptr;
@@ -367,6 +367,8 @@ int main()
     texMcdonalds = loadTexture("mcdonalds.jpg");
     texPizza = loadTexture("pizza.jpg");
     texWood = loadTexture("woodenTexture.jpg");
+    texPrayerTiles = loadTexture("prayerTiles.jpg");
+    texMahrib = loadTexture("mahrib.jpg");
 
     for (int i = 0; i < NUM_POINT_LIGHTS; i++)
     {
@@ -1369,9 +1371,8 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             // FLOOR 1 — all cutouts
             // North band Z:-40 to -20 (full width, no holes)
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, -30}, {80, SLAB, 20}, texFloor, 8, 32, .9f);
-            // Z:-20 to -8 sides only (atrium hole in center X:-10..10)
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {-25, fy, -14}, {30, SLAB, 12}, texFloor, 8, 32, .9f);
-            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {25, fy, -14}, {30, SLAB, 12}, texFloor, 8, 32, .9f);
+            // Z:-20 to -8 (Solid floor, atrium hole removed)
+            drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, -14}, {80, SLAB, 12}, texFloor, 8, 32, .9f);
             // Z:-8 to 10 (full width, below escalator/stair holes)
             drawCubeTextured(texCubeVAO, ls, I, C_FLOOR, {0, fy, 1}, {80, SLAB, 18}, texFloor, 8, 32, .9f);
             // Z:10 to 40 — strips around holes
@@ -1411,19 +1412,6 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         }
         ls.setBool("blendWithColor", false);
 
-        // Glass railing around atrium cutout (only on 1st floor)
-        if (fl == 1)
-        {
-            float rH = 1.2f, rY = FLOOR_Y[fl] + rH / 2;
-            drawCube(V, ls, I, C_GLASS, {-10, rY, -14}, {.08f, rH, 12}, 128, .3f);
-            drawCube(V, ls, I, C_GLASS, {10, rY, -14}, {.08f, rH, 12}, 128, .3f);
-            drawCube(V, ls, I, C_GLASS, {0, rY, -20}, {20, rH, .08f}, 128, .3f);
-            drawCube(V, ls, I, C_GLASS, {0, rY, -8}, {20, rH, .08f}, 128, .3f);
-            drawCube(V, ls, I, C_LAMP, {-10, FLOOR_Y[fl] + rH, -14}, {.1f, .05f, 12});
-            drawCube(V, ls, I, C_LAMP, {10, FLOOR_Y[fl] + rH, -14}, {.1f, .05f, 12});
-            drawCube(V, ls, I, C_LAMP, {0, FLOOR_Y[fl] + rH, -20}, {20, .05f, .1f});
-            drawCube(V, ls, I, C_LAMP, {0, FLOOR_Y[fl] + rH, -8}, {20, .05f, .1f});
-        }
     }
 
     // Ceilings for each floor
@@ -1443,9 +1431,8 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
             // Ground floor ceiling — same holes as floor 1 slab
             // North Z:-40..-20 full
             drawCube(V, ls, I, C_CEILING, {0, cy, -30}, {80, .1f, 20});
-            // Z:-20..-8 sides (atrium hole center)
-            drawCube(V, ls, I, C_CEILING, {-25, cy, -14}, {30, .1f, 12});
-            drawCube(V, ls, I, C_CEILING, {25, cy, -14}, {30, .1f, 12});
+            // Z:-20..-8 (Solid ceiling, atrium hole removed)
+            drawCube(V, ls, I, C_CEILING, {0, cy, -14}, {80, .1f, 12});
             // Z:-8..10 full
             drawCube(V, ls, I, C_CEILING, {0, cy, 1}, {80, .1f, 18});
             // Z:10..40 strips (same pattern as floor 1 slab)
@@ -1809,24 +1796,93 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
     }
 
     // ============================================================
-    // ATRIUM (Back center, X:-10 to 10, Z:-20 to -8)
-    // Open space with decorative floor, visible through 1st floor cutout
+    // PRAYER ROOM (Ground Floor, X:-10 to 10, Z:-20 to -8)
     // ============================================================
     {
-        // Atrium decorative floor
-        drawCube(V, ls, I, C_FLOOR * 1.1f, {0, .03f, -14}, {20, .04f, 12});
+        ls.setBool("blendWithColor", true);
+        glm::mat4 mFloor = glm::translate(I, {0.0f, 0.01f, -14.0f});
+        mFloor = glm::rotate(mFloor, glm::radians(180.0f), {0.0f, 1.0f, 0.0f});
+        drawCubeTextured(texCubeVAO, ls, mFloor, C_PRAY_FLOOR, {0, 0, 0}, {20.0f, 0.04f, 12.0f}, texPrayerTiles, 8.0f, 32, 1.0f);
+        ls.setBool("blendWithColor", false);
+
+        // Walls (X:-10..10, Z:-20..-8)
+        drawCube(V, ls, I, C_PRAY_WALL, {0, FLOOR_H / 2, -19.9f}, {20, FLOOR_H, 0.2f}); // Back wall
+        drawCube(V, ls, I, C_PRAY_WALL, {-9.9f, FLOOR_H / 2, -14}, {0.2f, FLOOR_H, 12}); // Left wall
+        drawCube(V, ls, I, C_PRAY_WALL, {9.9f, FLOOR_H / 2, -14}, {0.2f, FLOOR_H, 12});  // Right wall
+        
+        // Front wall with glass door gap
+        drawCube(V, ls, I, C_PRAY_WALL, {-7.5f, FLOOR_H / 2, -8.1f}, {5, FLOOR_H, 0.2f}); // Left of door
+        drawCube(V, ls, I, C_PRAY_WALL, {7.5f, FLOOR_H / 2, -8.1f}, {5, FLOOR_H, 0.2f});  // Right of door
+        drawCube(V, ls, I, C_PRAY_WALL, {0, FLOOR_H - 1.0f, -8.1f}, {10, 2.0f, 0.2f}); // Above door
+        
+        // Glass Doors (Double doors)
+        drawCube(V, ls, I, C_GLASS, {-2.5f, (FLOOR_H - 2.0f) / 2, -8.1f}, {4.8f, FLOOR_H - 2.0f, 0.1f}, 128, 0.4f);
+        drawCube(V, ls, I, C_GLASS, {2.5f, (FLOOR_H - 2.0f) / 2, -8.1f}, {4.8f, FLOOR_H - 2.0f, 0.1f}, 128, 0.4f);
+        
+        // Mihrab Decoration on back wall 
+        // 1. Arch outline
+        if (bezierArch) {
+            glm::mat4 mArch = glm::translate(I, {0, 0, -19.6f});
+            mArch = glm::scale(mArch, {2.5f, 1.5f, 1.0f});
+            bezierArch->draw(ls, mArch, glm::vec3(0.95f, 0.90f, 0.75f), 16.0f);
+            ls.setBool("useTexture", true); // Reset if needed
+        }
+        
+        // 2. Circular Calligraphy Frame (flattened cylinder)
+        if (cylinderObj) {
+            glm::mat4 mCyl = glm::translate(I, {0, 3.5f, -19.7f});
+            mCyl = glm::rotate(mCyl, glm::radians(90.0f), {1.0f, 0.0f, 0.0f});
+            mCyl = glm::scale(mCyl, {1.5f, 0.1f, 1.5f});
+            cylinderObj->draw(ls, mCyl, glm::vec3(0.15f, 0.15f, 0.15f));
+            
+            // Gold border
+            mCyl = glm::translate(I, {0, 3.5f, -19.75f});
+            mCyl = glm::rotate(mCyl, glm::radians(90.0f), {1.0f, 0.0f, 0.0f});
+            mCyl = glm::scale(mCyl, {1.6f, 0.05f, 1.6f});
+            cylinderObj->draw(ls, mCyl, glm::vec3(0.85f, 0.65f, 0.15f));
+        }
+
+        // 3. Flanking textured columns
+        for (int side = -1; side <= 1; side += 2) {
+            float sx = side * 5.0f;
+            ls.setBool("blendWithColor", true);
+            // Split column into two 3x3 cubes to prevent vertical stretching of the square aspect ratio texture
+            drawCubeTextured(texCubeVAO, ls, I, glm::vec3(1.0f), {sx, 1.5f, -19.6f}, {3.0f, 3.0f, 0.6f}, texMahrib, 1.0f, 32, 1.0f); // Bottom half
+            drawCubeTextured(texCubeVAO, ls, I, glm::vec3(1.0f), {sx, 4.5f, -19.6f}, {3.0f, 3.0f, 0.6f}, texMahrib, 1.0f, 32, 1.0f); // Top half
+            ls.setBool("blendWithColor", false);
+        }
+        
+        // 4. Quran Stand (Rehal) - X shape
+        ls.setBool("blendWithColor", true);
+        glm::mat4 mR1 = glm::translate(I, {0, 0.6f, -17.0f});
+        mR1 = glm::rotate(mR1, glm::radians(45.0f), {0.0f, 0.0f, 1.0f});
+        drawCubeTextured(texCubeVAO, ls, mR1, C_WOOD, {0, 0, 0}, {0.1f, 1.2f, 1.0f}, texWood, 1.0f, 64, 1.0f);
+        
+        glm::mat4 mR2 = glm::translate(I, {0, 0.6f, -17.0f});
+        mR2 = glm::rotate(mR2, glm::radians(-45.0f), {0.0f, 0.0f, 1.0f});
+        drawCubeTextured(texCubeVAO, ls, mR2, C_WOOD, {0, 0, 0}, {0.1f, 1.2f, 1.0f}, texWood, 1.0f, 64, 1.0f);
+        ls.setBool("blendWithColor", false);
+    }
+
+    // ============================================================
+    // ATRIUM SEATING SPACE (1st Floor, X:-10 to 10, Z:-20 to -8)
+    // ============================================================
+    {
+        float f1Y = FLOOR_Y[1];
+        // Atrium decorative floor on 1st floor
+        drawCube(V, ls, I, C_FLOOR * 1.1f, {0, f1Y + .03f, -14}, {20, .04f, 12});
         // Decorative border
-        drawCube(V, ls, I, C_LAMP, {0, .06f, -14}, {16, .02f, .15f});
-        drawCube(V, ls, I, C_LAMP, {0, .06f, -20}, {20, .02f, .15f});
-        drawCube(V, ls, I, C_LAMP, {0, .06f, -8}, {20, .02f, .15f});
-        drawCube(V, ls, I, C_LAMP, {-10, .06f, -14}, {.15f, .02f, 12});
-        drawCube(V, ls, I, C_LAMP, {10, .06f, -14}, {.15f, .02f, 12});
-        // Center decorative columns around atrium
+        drawCube(V, ls, I, C_LAMP, {0, f1Y + .06f, -14}, {16, .02f, .15f});
+        drawCube(V, ls, I, C_LAMP, {0, f1Y + .06f, -20}, {20, .02f, .15f});
+        drawCube(V, ls, I, C_LAMP, {0, f1Y + .06f, -8}, {20, .02f, .15f});
+        drawCube(V, ls, I, C_LAMP, {-10, f1Y + .06f, -14}, {.15f, .02f, 12});
+        drawCube(V, ls, I, C_LAMP, {10, f1Y + .06f, -14}, {.15f, .02f, 12});
+        // Center decorative columns
         float colR = 0.3f;
-        drawCube(V, ls, I, C_LAMP, {-9, FLOOR_H / 2, -9}, {colR, FLOOR_H, colR});
-        drawCube(V, ls, I, C_LAMP, {9, FLOOR_H / 2, -9}, {colR, FLOOR_H, colR});
-        drawCube(V, ls, I, C_LAMP, {-9, FLOOR_H / 2, -19}, {colR, FLOOR_H, colR});
-        drawCube(V, ls, I, C_LAMP, {9, FLOOR_H / 2, -19}, {colR, FLOOR_H, colR});
+        drawCube(V, ls, I, C_LAMP, {-9, f1Y + FLOOR_H / 2, -9}, {colR, FLOOR_H, colR});
+        drawCube(V, ls, I, C_LAMP, {9, f1Y + FLOOR_H / 2, -9}, {colR, FLOOR_H, colR});
+        drawCube(V, ls, I, C_LAMP, {-9, f1Y + FLOOR_H / 2, -19}, {colR, FLOOR_H, colR});
+        drawCube(V, ls, I, C_LAMP, {9, f1Y + FLOOR_H / 2, -19}, {colR, FLOOR_H, colR});
     }
 
     // ============================================================
