@@ -214,6 +214,10 @@ bool cursorCaptured = true;
 bool entranceDoorOpen = false;
 float entranceDoorOffset = 0.0f; // 0=closed, 1=open
 
+// Prayer room glass door
+bool prayerDoorOpen = false;
+float prayerDoorOffset = 0.0f; // 0=closed, 1=open
+
 // Texture IDs
 unsigned int texCubeVAO = 0;
 unsigned int texFloor = 0, texFashion = 0, texTech = 0, texGems = 0, texFood = 0, texTreeLeaf = 0, texTreeBark = 0, texGrass = 0;
@@ -547,6 +551,13 @@ int main()
             entranceDoorOffset = glm::min(entranceDoorOffset + deltaTime * 1.2f, doorTarget);
         if (entranceDoorOffset > doorTarget)
             entranceDoorOffset = glm::max(entranceDoorOffset - deltaTime * 1.2f, doorTarget);
+
+        // Prayer room door animation
+        float prayerTarget = prayerDoorOpen ? 1.0f : 0.0f;
+        if (prayerDoorOffset < prayerTarget)
+            prayerDoorOffset = glm::min(prayerDoorOffset + deltaTime * 1.5f, prayerTarget);
+        if (prayerDoorOffset > prayerTarget)
+            prayerDoorOffset = glm::max(prayerDoorOffset - deltaTime * 1.5f, prayerTarget);
         // Elevator state machine update (3-floor)
         // Check if player is inside lift (X:-37..-31, Z:22..28)
         {
@@ -1815,9 +1826,20 @@ void drawScene(unsigned int &V, unsigned int &LV, Shader &ls, Shader &fs, glm::m
         drawCube(V, ls, I, C_PRAY_WALL, {7.5f, FLOOR_H / 2, -8.1f}, {5, FLOOR_H, 0.2f});  // Right of door
         drawCube(V, ls, I, C_PRAY_WALL, {0, FLOOR_H - 1.0f, -8.1f}, {10, 2.0f, 0.2f}); // Above door
         
-        // Glass Doors (Double doors)
-        drawCube(V, ls, I, C_GLASS, {-2.5f, (FLOOR_H - 2.0f) / 2, -8.1f}, {4.8f, FLOOR_H - 2.0f, 0.1f}, 128, 0.4f);
-        drawCube(V, ls, I, C_GLASS, {2.5f, (FLOOR_H - 2.0f) / 2, -8.1f}, {4.8f, FLOOR_H - 2.0f, 0.1f}, 128, 0.4f);
+        // Glass Doors (Double doors sliding)
+        {
+            float doorW = 4.8f;
+            float slide = prayerDoorOffset * doorW * 0.9f;
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_FALSE);
+            
+            drawCube(V, ls, I, C_GLASS, {-2.5f - slide, (FLOOR_H - 2.0f) / 2, -8.1f}, {doorW, FLOOR_H - 2.0f, 0.1f}, 128, 0.4f);
+            drawCube(V, ls, I, C_GLASS, {2.5f + slide, (FLOOR_H - 2.0f) / 2, -8.1f}, {doorW, FLOOR_H - 2.0f, 0.1f}, 128, 0.4f);
+            
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);
+        }
         
         // Mihrab Decoration on back wall 
         // 1. Arch outline
@@ -2198,7 +2220,12 @@ void key_callback(GLFWwindow *w, int key, int sc, int action, int mods)
     if (key == GLFW_KEY_B)
     {
         barrierOpen = !barrierOpen;
-        cout << "Boom Barrier: " << (barrierOpen ? "OPENING" : "CLOSING") << endl;
+        cout << "Boom Barrier: " << (barrierOpen ? "OPEN" : "CLOSED") << endl;
+    }
+    if (key == GLFW_KEY_P)
+    {
+        prayerDoorOpen = !prayerDoorOpen;
+        cout << "Prayer Room Door: " << (prayerDoorOpen ? "OPEN" : "CLOSED") << endl;
     }
     if (key == GLFW_KEY_C)
     {
