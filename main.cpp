@@ -2377,7 +2377,8 @@ void processInput(GLFWwindow *w)
             targetY = FLOOR_Y[1] + 1.7f;
 
         // Inside Elevator override (lift at X:-37..-31, Z:22..28)
-        bool inLift = (x >= -37 && x <= -31 && z >= 22 && z <= 28);
+        bool inLift = (x >= -37 && x <= -31 && z >= 22 && z <= 28 &&
+                       basic_camera.eye.y >= elevatorY + 0.5f && basic_camera.eye.y <= elevatorY + 4.0f);
         if (inLift)
         {
             targetY = elevatorY + 1.7f;
@@ -2420,8 +2421,16 @@ void processInput(GLFWwindow *w)
             if (x >= 34 && x <= 38 && z >= 22 && z <= 30 && basic_camera.eye.y > CEIL_Y[2] - 1)
                 targetY = CEIL_Y[2] + 1.7f;
         }
-        // Smooth height transition
-        basic_camera.eye.y = glm::mix(basic_camera.eye.y, targetY, deltaTime * 10.0f);
+        // Height transition
+        if (inLift)
+        {
+            basic_camera.eye.y = targetY; // strictly lock to lift height to prevent shaking
+        }
+        else
+        {
+            float mixFactor = glm::min((float)(deltaTime * 10.0f), 1.0f);
+            basic_camera.eye.y = glm::mix(basic_camera.eye.y, targetY, mixFactor);
+        }
     }
     else
     {

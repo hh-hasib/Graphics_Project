@@ -56,6 +56,21 @@
     <ClInclude Include="stb_image.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="bezierCurve.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cylinder.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="fractalTree.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="human.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="spotLight.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="fragmentShader.fs">
@@ -82,5 +97,82 @@
     <None Include="vertexShaderForPhongShadingWithTexture.vs">
       <Filter>Source Files</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="biriyani.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="book.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="cake.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="cloth.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="cocacola.png">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="coffee.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="colddrink.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="electronic.png">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="fashion_shop.png">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="floor_tiles_texture.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="food_court.png">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="gems.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="gems_shop.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="grass.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="icecream.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="kitkat_poster.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="mahrib.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="mcdonalds.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="movie_poster.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="pizza.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="prayerTiles.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="tech_shop.png">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="tree_leaves_texture.png">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="tree_texture.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
+    <Image Include="woodenTexture.jpg">
+      <Filter>Source Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

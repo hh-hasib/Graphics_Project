@@ -138,14 +138,19 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="basic_camera.h" />
+    <ClInclude Include="bezierCurve.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="cube.h" />
+    <ClInclude Include="cylinder.h" />
     <ClInclude Include="directionalLight.h" />
+    <ClInclude Include="fractalTree.h" />
     <ClInclude Include="hexagon.h" />
+    <ClInclude Include="human.h" />
     <ClInclude Include="pointLight.h" />
     <ClInclude Include="pyramid.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="sphere.h" />
+    <ClInclude Include="spotLight.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +162,33 @@
     <None Include="vertexShaderForGouraudShading.vs" />
     <None Include="vertexShaderForPhongShading.vs" />
     <None Include="vertexShaderForPhongShadingWithTexture.vs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="biriyani.jpg" />
+    <Image Include="book.jpg" />
+    <Image Include="cake.jpg" />
+    <Image Include="cloth.jpg" />
+    <Image Include="cocacola.png" />
+    <Image Include="coffee.jpg" />
+    <Image Include="colddrink.jpg" />
+    <Image Include="electronic.png" />
+    <Image Include="fashion_shop.png" />
+    <Image Include="floor_tiles_texture.jpg" />
+    <Image Include="food_court.png" />
+    <Image Include="gems.jpg" />
+    <Image Include="gems_shop.jpg" />
+    <Image Include="grass.jpg" />
+    <Image Include="icecream.jpg" />
+    <Image Include="kitkat_poster.jpg" />
+    <Image Include="mahrib.jpg" />
+    <Image Include="mcdonalds.jpg" />
+    <Image Include="movie_poster.jpg" />
+    <Image Include="pizza.jpg" />
+    <Image Include="prayerTiles.jpg" />
+    <Image Include="tech_shop.png" />
+    <Image Include="tree_leaves_texture.png" />
+    <Image Include="tree_texture.jpg" />
+    <Image Include="woodenTexture.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
